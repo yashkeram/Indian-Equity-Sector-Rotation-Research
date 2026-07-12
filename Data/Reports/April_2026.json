@@ -1,0 +1,55 @@
+{
+    "month": "April 2026",
+    "nifty50_return": 7.46,
+    "best_sector": "realty",
+    "best_sector_return": 21.87,
+    "worst_sector": "it",
+    "worst_sector_return": 1.0,
+    "sector_returns": {
+        "auto": 9.04,
+        "bank": 9.13,
+        "fmcg": 12.15,
+        "it": 1.0,
+        "metal": 15.21,
+        "nifty50": 7.46,
+        "pharma": 4.66,
+        "realty": 21.87
+    },
+    "top_stocks": {
+        "auto": [
+            "Bajaj Auto",
+            "Maruti Suzuki",
+            "Eicher Motors"
+        ],
+        "bank": [
+            "IndusInd Bank",
+            "AU Small Finance Bank",
+            "Federal Bank"
+        ],
+        "fmcg": [
+            "Nestle India",
+            "Tata Consumer",
+            "HUL"
+        ],
+        "it": [
+            "Coforge",
+            "Wipro",
+            "Tech Mahindra"
+        ],
+        "metal": [
+            "SAIL",
+            "Hindustan Zinc",
+            "Hindalco"
+        ],
+        "pharma": [
+            "Mankind",
+            "Divis Lab",
+            "Cipla"
+        ],
+        "realty": [
+            "Macrotech Developers",
+            "Prestige Estates",
+            "Godrej Properties"
+        ]
+    }
+}

@@ -1,0 +1,55 @@
+{
+    "month": "March 2026",
+    "nifty50_return": -11.31,
+    "best_sector": "pharma",
+    "best_sector_return": -3.14,
+    "worst_sector": "bank",
+    "worst_sector_return": -16.94,
+    "sector_returns": {
+        "auto": -15.59,
+        "bank": -16.94,
+        "fmcg": -10.96,
+        "it": -5.04,
+        "metal": -9.0,
+        "nifty50": -11.31,
+        "pharma": -3.14,
+        "realty": -16.58
+    },
+    "top_stocks": {
+        "auto": [
+            "Hero MotoCorp",
+            "Bajaj Auto",
+            "TVS Motor"
+        ],
+        "bank": [
+            "AU Small Finance Bank",
+            "ICICI Bank",
+            "Federal Bank"
+        ],
+        "fmcg": [
+            "Marico",
+            "ITC",
+            "Nestle India"
+        ],
+        "it": [
+            "Persistent Systems",
+            "Tech Mahindra",
+            "HCL Tech"
+        ],
+        "metal": [
+            "NALCO",
+            "Hindalco",
+            "Vedanta"
+        ],
+        "pharma": [
+            "Aurobindo",
+            "Sun Pharma",
+            "Lupin"
+        ],
+        "realty": [
+            "Brigade Enterprises",
+            "Oberoi Realty",
+            "Phoenix Mills"
+        ]
+    }
+}

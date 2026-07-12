@@ -1,0 +1,55 @@
+{
+    "month": "June 2026",
+    "nifty50_return": 1.35,
+    "best_sector": "bank",
+    "best_sector_return": 6.09,
+    "worst_sector": "it",
+    "worst_sector_return": -9.56,
+    "sector_returns": {
+        "auto": 0.54,
+        "bank": 6.09,
+        "fmcg": -1.19,
+        "it": -9.56,
+        "metal": -6.86,
+        "nifty50": 1.35,
+        "pharma": 4.03,
+        "realty": 6.01
+    },
+    "top_stocks": {
+        "auto": [
+            "Maruti Suzuki",
+            "Ashok Leyland",
+            "TVS Motor"
+        ],
+        "bank": [
+            "Federal Bank",
+            "ICICI Bank",
+            "HDFC Bank"
+        ],
+        "fmcg": [
+            "Marico",
+            "ITC",
+            "HUL"
+        ],
+        "it": [
+            "Coforge",
+            "Tech Mahindra",
+            "HCL Tech"
+        ],
+        "metal": [
+            "Jindal Steel",
+            "JSW Steel",
+            "Tata Steel"
+        ],
+        "pharma": [
+            "Aurobindo",
+            "Mankind",
+            "Lupin"
+        ],
+        "realty": [
+            "Prestige Estates",
+            "Phoenix Mills",
+            "Godrej Properties"
+        ]
+    }
+}

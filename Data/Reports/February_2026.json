@@ -1,0 +1,55 @@
+{
+    "month": "February 2026",
+    "nifty50_return": -0.56,
+    "best_sector": "pharma",
+    "best_sector_return": 5.7,
+    "worst_sector": "it",
+    "worst_sector_return": -19.54,
+    "sector_returns": {
+        "auto": 5.27,
+        "bank": 1.54,
+        "fmcg": -0.14,
+        "it": -19.54,
+        "metal": 3.49,
+        "nifty50": -0.56,
+        "pharma": 5.7,
+        "realty": -0.31
+    },
+    "top_stocks": {
+        "auto": [
+            "Eicher Motors",
+            "Ashok Leyland",
+            "TVS Motor"
+        ],
+        "bank": [
+            "State Bank of India",
+            "IndusInd Bank",
+            "Federal Bank"
+        ],
+        "fmcg": [
+            "Marico",
+            "Godrej Consumer",
+            "Britannia"
+        ],
+        "it": [
+            "Wipro",
+            "TCS",
+            "HCL Tech"
+        ],
+        "metal": [
+            "Tata Steel",
+            "SAIL",
+            "Vedanta"
+        ],
+        "pharma": [
+            "Sun Pharma",
+            "Lupin",
+            "Divis Lab"
+        ],
+        "realty": [
+            "Godrej Properties",
+            "Oberoi Realty",
+            "Macrotech Developers"
+        ]
+    }
+}
