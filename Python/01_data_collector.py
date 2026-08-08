@@ -2,7 +2,7 @@ import os
 import yfinance as yf
 
 # Create Raw folder
-os.makedirs("../Data/Raw", exist_ok=True)
+os.makedirs("Data/Raw", exist_ok=True)
 
 indices = {
     "nifty50": "^NSEI",
@@ -22,7 +22,7 @@ for name, ticker in indices.items():
     df = yf.download(
         ticker,
         start="2026-01-01",
-        end="2026-07-01",
+        end="2026-08-01",
         auto_adjust=True,
         progress=False
     )
@@ -33,6 +33,6 @@ for name, ticker in indices.items():
 
     df.reset_index(inplace=True)
 
-    df.to_csv(f"../Data/Raw/{name}.csv", index=False)
+    df.to_csv(f"Data/Raw/{name}.csv", index=False)
 
 print("Done!")

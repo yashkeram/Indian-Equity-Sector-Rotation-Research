@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # Folder containing sector CSV files
-DATA_FOLDER = "../Data/Raw"
+DATA_FOLDER = "Data/Raw"
 
 # Get all CSV files
 files = [f for f in os.listdir(DATA_FOLDER) if f.endswith(".csv")]
@@ -37,7 +37,7 @@ results = results.round(2)
 print(results)
 
 # Save results
-results.to_csv("../Data/Processed/sector_returns.csv")
+results.to_csv("Data/Processed/sector_returns.csv")
 
 print("Sector returns saved successfully!")
 
