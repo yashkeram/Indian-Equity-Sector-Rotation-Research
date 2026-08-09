@@ -5,37 +5,70 @@ import pandas as pd
 
 
 # ============================================================
+# MODULE 06 - MONTHLY REPORT GENERATOR
+# ============================================================
+
+
+# ============================================================
 # PATHS
 # ============================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(BASE_DIR, "..")
+)
+
+DATA_FOLDER = os.path.join(
+    PROJECT_ROOT,
+    "Data"
+)
 
 PROCESSED_FOLDER = os.path.join(
-    PROJECT_DIR,
-    "Data",
+    DATA_FOLDER,
     "Processed"
 )
 
 SUMMARY_FOLDER = os.path.join(
-    PROJECT_DIR,
-    "Data",
+    DATA_FOLDER,
     "Summary"
 )
 
 REPORT_FOLDER = os.path.join(
-    PROJECT_DIR,
-    "Data",
+    DATA_FOLDER,
     "Reports"
 )
 
 
+# Create Reports folder if it does not exist
+os.makedirs(
+    REPORT_FOLDER,
+    exist_ok=True
+)
+
+
 # ============================================================
-# MONTHS
+# MONTH INPUT
 # ============================================================
 
-VALID_MONTHS = [
+if len(sys.argv) != 2:
+
+    print()
+    print("Usage:")
+    print("python Python\\06_monthly_report.py July")
+    print()
+
+    sys.exit(1)
+
+
+MONTH_NAME = sys.argv[1].strip().capitalize()
+
+
+# ============================================================
+# MONTH CONFIGURATION
+# ============================================================
+
+MONTHS = [
     "January",
     "February",
     "March",
@@ -51,31 +84,16 @@ VALID_MONTHS = [
 ]
 
 
-# ============================================================
-# MONTH INPUT
-# ============================================================
+if MONTH_NAME not in MONTHS:
 
-if len(sys.argv) != 2:
-    print()
-    print("Usage:")
-    print("python Python\\06_monthly_report.py <Month>")
-    print()
-    print("Example:")
-    print("python Python\\06_monthly_report.py July")
-    print()
-    sys.exit(1)
-
-
-MONTH_NAME = sys.argv[1].strip().capitalize()
-
-
-if MONTH_NAME not in VALID_MONTHS:
     print()
     print(f"Invalid month: {MONTH_NAME}")
     print()
     print("Valid months:")
-    print(", ".join(VALID_MONTHS))
-    print()
+
+    for month in MONTHS:
+        print(f" - {month}")
+
     sys.exit(1)
 
 
@@ -96,40 +114,74 @@ REPORT_PATH = os.path.join(
 # ============================================================
 
 print()
-print("==============================================")
-print("INDIAN EQUITY SECTOR ROTATION - MONTHLY REPORT")
-print("==============================================")
+print("==========================================")
+print("MODULE 06 - MONTHLY REPORT GENERATOR")
+print("==========================================")
 print()
-print("Project Directory :", PROJECT_DIR)
-print("Processed Folder  :", PROCESSED_FOLDER)
-print("Summary Folder    :", SUMMARY_FOLDER)
-print("Report Folder     :", REPORT_FOLDER)
-print("Month             :", f"{MONTH_NAME} 2026")
+
+print(
+    f"Project Root   : {PROJECT_ROOT}"
+)
+
+print(
+    f"Processed Data : {PROCESSED_FOLDER}"
+)
+
+print(
+    f"Summary Folder : {SUMMARY_FOLDER}"
+)
+
+print(
+    f"Report Folder  : {REPORT_FOLDER}"
+)
+
+print(
+    f"Month          : {MONTH_NAME} 2026"
+)
+
 print()
 
 
 # ============================================================
-# CHECK PROCESSED FOLDER
+# VALIDATE PROCESSED FOLDER
 # ============================================================
 
 if not os.path.exists(PROCESSED_FOLDER):
+
     raise FileNotFoundError(
-        f"Processed folder not found:\n{PROCESSED_FOLDER}"
+        f"Processed folder not found:\n"
+        f"{PROCESSED_FOLDER}"
     )
 
 
 # ============================================================
-# CHECK SECTOR RETURNS FILE
+# VALIDATE SUMMARY FOLDER
 # ============================================================
 
-SECTOR_RETURNS_FILE = os.path.join(
-    PROCESSED_FOLDER,
-    "sector_returns.csv"
+if not os.path.exists(SUMMARY_FOLDER):
+
+    raise FileNotFoundError(
+        f"Summary folder not found:\n"
+        f"{SUMMARY_FOLDER}"
+    )
+
+
+# ============================================================
+# MONTH SUMMARY FOLDER
+# ============================================================
+
+MONTH_SUMMARY_FOLDER = os.path.join(
+    SUMMARY_FOLDER,
+    MONTH_NAME
 )
 
-if not os.path.exists(SECTOR_RETURNS_FILE):
+
+if not os.path.exists(MONTH_SUMMARY_FOLDER):
+
     raise FileNotFoundError(
-        f"sector_returns.csv not found:\n{SECTOR_RETURNS_FILE}"
+        f"{MONTH_NAME} summary folder not found:\n"
+        f"{MONTH_SUMMARY_FOLDER}\n\n"
+        f"Run Module 05 first."
     )
 
 
@@ -137,98 +189,105 @@ if not os.path.exists(SECTOR_RETURNS_FILE):
 # READ SECTOR RETURNS
 # ============================================================
 
-sector_returns = pd.read_csv(
-    SECTOR_RETURNS_FILE
+SECTOR_RETURNS_FILE = os.path.join(
+    PROCESSED_FOLDER,
+    "sector_returns.csv"
 )
 
-if sector_returns.empty:
-    raise ValueError(
-        "sector_returns.csv is empty."
+
+if not os.path.exists(SECTOR_RETURNS_FILE):
+
+    raise FileNotFoundError(
+        "sector_returns.csv not found:\n"
+        f"{SECTOR_RETURNS_FILE}"
     )
 
 
+print("Loading sector returns...")
+
+
+sector_returns = pd.read_csv(
+    SECTOR_RETURNS_FILE,
+    index_col=0
+)
+
+
 # ============================================================
-# IDENTIFY DATE COLUMN
+# CONVERT INDEX TO DATES
 # ============================================================
 
-date_column = sector_returns.columns[0]
-
-sector_returns[date_column] = pd.to_datetime(
-    sector_returns[date_column],
+sector_returns.index = pd.to_datetime(
+    sector_returns.index,
     errors="coerce"
 )
 
-sector_returns = sector_returns.dropna(
-    subset=[date_column]
-)
 
-sector_returns.set_index(
-    date_column,
-    inplace=True
-)
+# Remove invalid dates
+sector_returns = sector_returns[
+    sector_returns.index.notna()
+]
 
 
 # ============================================================
 # FIND REQUESTED MONTH
 # ============================================================
 
-target_year = 2026
-target_month = pd.Timestamp(
-    year=target_year,
-    month=VALID_MONTHS.index(MONTH_NAME) + 1,
-    day=1
+target_month_number = (
+    MONTHS.index(MONTH_NAME) + 1
 )
 
 
 matching_rows = sector_returns[
-    (sector_returns.index.year == target_year)
+    (sector_returns.index.year == 2026)
     &
-    (sector_returns.index.month == target_month.month)
+    (
+        sector_returns.index.month
+        == target_month_number
+    )
 ]
 
 
 if matching_rows.empty:
+
     raise ValueError(
-        f"No sector-return data found for {MONTH_NAME} 2026."
+        f"No sector return data found for "
+        f"{MONTH_NAME} 2026.\n\n"
+        f"Available dates:\n"
+        f"{list(sector_returns.index.strftime('%Y-%m-%d'))}"
     )
 
 
-# Use the last available observation for that month.
-latest = matching_rows.iloc[-1].copy()
+# Use the latest available row for that month
+latest = matching_rows.iloc[-1]
 
 
-# ============================================================
-# CLEAN NUMERIC VALUES
-# ============================================================
-
+# Convert values to numeric
 latest = pd.to_numeric(
     latest,
     errors="coerce"
-).dropna()
+)
 
+
+latest = latest.dropna()
+
+
+# ============================================================
+# VALIDATE MONTH DATA
+# ============================================================
 
 if latest.empty:
+
     raise ValueError(
-        f"No valid sector-return values found for {MONTH_NAME} 2026."
+        f"No valid sector returns available "
+        f"for {MONTH_NAME} 2026."
     )
 
 
 # ============================================================
-# NIFTY 50
+# BEST SECTOR
 # ============================================================
 
-nifty50_return = None
-
-if "nifty50" in latest.index:
-    nifty50_return = float(
-        latest["nifty50"]
-    )
-
-
-# ============================================================
-# SECTOR RETURNS
-# ============================================================
-
+# Exclude NIFTY 50 from sector ranking
 sector_only = latest.drop(
     labels=["nifty50"],
     errors="ignore"
@@ -236,14 +295,12 @@ sector_only = latest.drop(
 
 
 if sector_only.empty:
+
     raise ValueError(
-        "No sector data available after removing NIFTY 50."
+        "No sector data available after "
+        "excluding NIFTY 50."
     )
 
-
-# ============================================================
-# BEST SECTOR
-# ============================================================
 
 best_sector = sector_only.idxmax()
 
@@ -264,102 +321,147 @@ worst_sector_return = float(
 
 
 # ============================================================
-# MONTHLY STOCK SUMMARIES
+# NIFTY 50
 # ============================================================
 
-month_folder = os.path.join(
-    SUMMARY_FOLDER,
-    MONTH_NAME
+if "nifty50" in latest.index:
+
+    nifty50_return = float(
+        latest["nifty50"]
+    )
+
+else:
+
+    nifty50_return = None
+
+
+# ============================================================
+# READ MODULE 05 SUMMARIES
+# ============================================================
+
+print()
+print(
+    f"Reading {MONTH_NAME} stock summaries..."
 )
+print()
 
 
 top_stocks = {}
 
+bottom_stocks = {}
 
-if os.path.exists(month_folder):
 
-    for filename in sorted(
-        os.listdir(month_folder)
-    ):
+summary_files = [
+    file
+    for file in os.listdir(
+        MONTH_SUMMARY_FOLDER
+    )
+    if file.endswith("_summary.csv")
+]
 
-        if not filename.endswith(
-            "_summary.csv"
+
+if not summary_files:
+
+    print(
+        f"Warning: No summary CSV files found in "
+        f"{MONTH_SUMMARY_FOLDER}"
+    )
+
+
+# ============================================================
+# PROCESS EACH SECTOR SUMMARY
+# ============================================================
+
+for file in sorted(summary_files):
+
+    sector = file.replace(
+        "_summary.csv",
+        ""
+    )
+
+
+    file_path = os.path.join(
+        MONTH_SUMMARY_FOLDER,
+        file
+    )
+
+
+    try:
+
+        df = pd.read_csv(
+            file_path
+        )
+
+
+        # ====================================================
+        # TOP STOCKS
+        # ====================================================
+
+        if (
+            "Rank" in df.columns
+            and "Company" in df.columns
         ):
-            continue
 
-        sector = filename.replace(
-            "_summary.csv",
-            ""
-        )
-
-        summary_path = os.path.join(
-            month_folder,
-            filename
-        )
-
-        try:
-
-            df = pd.read_csv(
-                summary_path
-            )
-
-            if (
-                "Rank" not in df.columns
-                or "Company" not in df.columns
-            ):
-                print(
-                    f"Warning: Missing Rank/Company columns in {filename}"
-                )
-                continue
-
-            rank_values = (
+            top = df[
                 df["Rank"]
                 .astype(str)
-                .str.strip()
-            )
-
-            top_rows = df[
-                rank_values.str.contains(
-                    "Top",
-                    case=False,
-                    na=False
-                )
+                .str.startswith("Top")
             ]
 
-            companies = (
-                top_rows["Company"]
+
+            top_stocks[sector] = (
+                top["Company"]
                 .dropna()
-                .astype(str)
                 .tolist()
             )
 
-            if companies:
-                top_stocks[sector] = companies
 
-        except Exception as error:
+            # =================================================
+            # BOTTOM STOCKS
+            # =================================================
 
-            print(
-                f"Warning: Could not process {filename}: {error}"
+            bottom = df[
+                df["Rank"]
+                .astype(str)
+                .str.startswith("Bottom")
+            ]
+
+
+            bottom_stocks[sector] = (
+                bottom["Company"]
+                .dropna()
+                .tolist()
             )
 
-else:
 
-    print(
-        f"Warning: Summary folder not found:\n{month_folder}"
-    )
+        print(
+            f"{sector.upper():<10} summary loaded"
+        )
+
+
+    except Exception as error:
+
+        print(
+            f"Warning: Could not process "
+            f"{file}: {error}"
+        )
 
 
 # ============================================================
-# CONVERT SECTOR RETURNS TO DICTIONARY
+# CREATE SECTOR RETURNS DICTIONARY
 # ============================================================
 
-sector_returns_dict = {
-    str(sector): round(
+sector_returns_dict = {}
+
+
+for sector, value in latest.items():
+
+    sector_returns_dict[
+        str(sector)
+    ] = round(
         float(value),
         2
     )
-    for sector, value in latest.items()
-}
 
 
 # ============================================================
@@ -368,50 +470,46 @@ sector_returns_dict = {
 
 report = {
 
-    "month": f"{MONTH_NAME} 2026",
+    "month":
+        f"{MONTH_NAME} 2026",
 
-    "nifty50_return": (
-        round(nifty50_return, 2)
-        if nifty50_return is not None
-        else None
-    ),
+    "year":
+        2026,
 
-    "best_sector": str(
-        best_sector
-    ),
+    "nifty50_return":
+        nifty50_return,
 
-    "best_sector_return": round(
-        best_sector_return,
-        2
-    ),
+    "best_sector":
+        str(best_sector),
 
-    "worst_sector": str(
-        worst_sector
-    ),
+    "best_sector_return":
+        round(
+            best_sector_return,
+            2
+        ),
 
-    "worst_sector_return": round(
-        worst_sector_return,
-        2
-    ),
+    "worst_sector":
+        str(worst_sector),
 
-    "sector_returns": sector_returns_dict,
+    "worst_sector_return":
+        round(
+            worst_sector_return,
+            2
+        ),
 
-    "top_stocks": top_stocks
+    "sector_returns":
+        sector_returns_dict,
+
+    "top_stocks":
+        top_stocks,
+
+    "bottom_stocks":
+        bottom_stocks
 }
 
 
 # ============================================================
-# CREATE REPORT FOLDER
-# ============================================================
-
-os.makedirs(
-    REPORT_FOLDER,
-    exist_ok=True
-)
-
-
-# ============================================================
-# SAVE JSON
+# SAVE JSON REPORT
 # ============================================================
 
 with open(
@@ -429,34 +527,65 @@ with open(
 
 
 # ============================================================
-# FINAL OUTPUT
+# DISPLAY RESULTS
 # ============================================================
 
 print()
-print("==============================================")
+print("==========================================")
 print("MONTHLY REPORT CREATED SUCCESSFULLY")
-print("==============================================")
+print("==========================================")
 print()
+
+
 print(
-    f"Month        : {MONTH_NAME} 2026"
+    f"Month       : {MONTH_NAME} 2026"
 )
+
 
 if nifty50_return is not None:
+
     print(
-        f"NIFTY 50     : {nifty50_return:.2f}%"
+        f"NIFTY 50    : "
+        f"{nifty50_return:.2f}%"
     )
 
-print(
-    f"Best Sector  : {best_sector}"
-    f" ({best_sector_return:.2f}%)"
-)
 
 print(
-    f"Worst Sector : {worst_sector}"
-    f" ({worst_sector_return:.2f}%)"
+    f"Best Sector : "
+    f"{str(best_sector).title()} "
+    f"({best_sector_return:.2f}%)"
 )
+
+
+print(
+    f"Worst Sector: "
+    f"{str(worst_sector).title()} "
+    f"({worst_sector_return:.2f}%)"
+)
+
 
 print()
+
+
+print(
+    f"Sector data : "
+    f"{len(sector_returns_dict)} sectors"
+)
+
+
+print(
+    f"Summaries   : "
+    f"{len(summary_files)} sectors"
+)
+
+
+print()
+
+
 print("Report saved to:")
-print(REPORT_PATH)
+
+print(
+    REPORT_PATH
+)
+
 print()

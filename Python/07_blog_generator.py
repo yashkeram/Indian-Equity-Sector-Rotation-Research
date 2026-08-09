@@ -4,33 +4,60 @@ import json
 
 
 # ============================================================
+# MODULE 07 - BLOG GENERATOR
+# ============================================================
+
+
+# ============================================================
 # PATHS
 # ============================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
 
-PROJECT_DIR = os.path.abspath(
+PROJECT_ROOT = os.path.abspath(
     os.path.join(BASE_DIR, "..")
 )
 
 REPORTS_FOLDER = os.path.join(
-    PROJECT_DIR,
+    PROJECT_ROOT,
     "Data",
     "Reports"
 )
 
 BLOGS_FOLDER = os.path.join(
-    PROJECT_DIR,
+    PROJECT_ROOT,
     "Blogs",
     "2026"
 )
 
 
+# Create blog directory
+os.makedirs(
+    BLOGS_FOLDER,
+    exist_ok=True
+)
+
+
 # ============================================================
-# MONTHS
+# MONTH INPUT
 # ============================================================
 
-VALID_MONTHS = [
+if len(sys.argv) != 2:
+
+    print()
+    print("Usage:")
+    print("python Python\\07_blog_generator.py July")
+    print()
+
+    sys.exit(1)
+
+
+MONTH_NAME = sys.argv[1].strip().capitalize()
+
+
+MONTHS = [
     "January",
     "February",
     "March",
@@ -46,34 +73,11 @@ VALID_MONTHS = [
 ]
 
 
-# ============================================================
-# MONTH INPUT
-# ============================================================
+if MONTH_NAME not in MONTHS:
 
-if len(sys.argv) != 2:
-
-    print()
-    print("Usage:")
-    print("python Python\\07_blog_generator.py <Month>")
-    print()
-    print("Example:")
-    print("python Python\\07_blog_generator.py July")
-    print()
-
-    sys.exit(1)
-
-
-MONTH_NAME = sys.argv[1].strip().capitalize()
-
-
-if MONTH_NAME not in VALID_MONTHS:
-
-    print()
-    print(f"Invalid month: {MONTH_NAME}")
-    print()
-    print("Valid months:")
-    print(", ".join(VALID_MONTHS))
-    print()
+    print(
+        f"Invalid month: {MONTH_NAME}"
+    )
 
     sys.exit(1)
 
@@ -103,76 +107,63 @@ BLOG_PATH = os.path.join(
 # ============================================================
 
 print()
-print("==============================================")
-print("INDIAN EQUITY SECTOR ROTATION - BLOG GENERATOR")
-print("==============================================")
+print("==========================================")
+print("MODULE 07 - BLOG GENERATOR")
+print("==========================================")
 print()
 
 print(
-    "Report Source :",
-    REPORT_PATH
+    f"Project Root : {PROJECT_ROOT}"
 )
 
 print(
-    "Blog Output   :",
-    BLOG_PATH
+    f"Report       : {REPORT_PATH}"
+)
+
+print(
+    f"Blog Folder  : {BLOGS_FOLDER}"
+)
+
+print(
+    f"Month        : {MONTH_NAME} 2026"
 )
 
 print()
 
 
 # ============================================================
-# CHECK REPORT
+# VALIDATE REPORT
 # ============================================================
 
 if not os.path.exists(REPORT_PATH):
 
-    print(
-        "Monthly report not found."
-    )
-
-    print(
-        "Run Module 06 first:"
-    )
-
-    print(
-        f"python Python\\06_monthly_report.py {MONTH_NAME}"
-    )
-
-    print()
-
-    sys.exit(1)
-
-
-# ============================================================
-# LOAD JSON REPORT
-# ============================================================
-
-try:
-
-    with open(
-        REPORT_PATH,
-        "r",
-        encoding="utf-8"
-    ) as file:
-
-        report = json.load(file)
-
-except json.JSONDecodeError as error:
-
-    raise ValueError(
-        f"Invalid JSON report:\n{error}"
+    raise FileNotFoundError(
+        f"Report not found:\n{REPORT_PATH}\n\n"
+        f"Run Module 06 first."
     )
 
 
 # ============================================================
-# REQUIRED DATA
+# LOAD REPORT
 # ============================================================
 
-month = report.get(
-    "month",
-    f"{MONTH_NAME} 2026"
-)
+print("Loading monthly report...")
+
+
+with open(
+    REPORT_PATH,
+    "r",
+    encoding="utf-8"
+) as file:
+
+    report = json.load(file)
+
+
+# ============================================================
+# EXTRACT DATA
+# ============================================================
+
+month = report["month"]
 
 nifty50_return = report.get(
     "nifty50_return"
@@ -180,7 +171,7 @@ nifty50_return = report.get(
 
 best_sector = report.get(
     "best_sector",
-    "Unknown"
+    "N/A"
 )
 
 best_sector_return = report.get(
@@ -189,7 +180,7 @@ best_sector_return = report.get(
 
 worst_sector = report.get(
     "worst_sector",
-    "Unknown"
+    "N/A"
 )
 
 worst_sector_return = report.get(
@@ -206,169 +197,238 @@ top_stocks = report.get(
     {}
 )
 
-
-# ============================================================
-# FORMAT HELPERS
-# ============================================================
-
-def format_return(value):
-    """
-    Format a numerical return as a percentage.
-    """
-
-    if value is None:
-        return "N/A"
-
-    return f"{float(value):.2f}%"
-
-
-def title_sector(sector):
-    """
-    Convert sector identifier into readable title.
-    """
-
-    return str(
-        sector
-    ).replace(
-        "_",
-        " "
-    ).title()
+bottom_stocks = report.get(
+    "bottom_stocks",
+    {}
+)
 
 
 # ============================================================
-# BUILD BLOG
+# BLOG HEADER
 # ============================================================
 
-markdown = f"""# Indian Equity Sector Rotation Report
-
-## {month}
-
----
+markdown = f"""# Indian Equity Sector Rotation Report — {month}
 
 ## Market Overview
 
-The NIFTY 50 returned **{format_return(nifty50_return)}** during {month}.
+The Indian equity market delivered a mixed performance during **{month}**, with different sectors showing significant differences in momentum.
 
-The **{title_sector(best_sector)}** sector was the strongest-performing sector, returning **{format_return(best_sector_return)}**.
-
-The **{title_sector(worst_sector)}** sector was the weakest-performing sector, returning **{format_return(worst_sector_return)}**.
-
----
-
-## Sector Performance
-
-| Sector | Monthly Return |
-|--------|----------------|
 """
 
 
 # ============================================================
-# SECTOR TABLE
+# NIFTY 50
 # ============================================================
 
-for sector, value in sector_returns.items():
+if nifty50_return is not None:
 
-    # NIFTY 50 is the benchmark,
-    # not a sector.
+    markdown += f"""
+### NIFTY 50 Performance
 
-    if str(sector).lower() == "nifty50":
+The **NIFTY 50** returned **{nifty50_return:.2f}%** during {month}.
+
+This provides the benchmark against which sector performance can be evaluated.
+
+"""
+
+
+# ============================================================
+# SECTOR LEADERSHIP
+# ============================================================
+
+markdown += f"""
+## Sector Leadership
+
+The strongest-performing sector during {month} was **{best_sector.title()}**, delivering a monthly return of **{best_sector_return:.2f}%**.
+
+The weakest-performing sector was **{worst_sector.title()}**, which returned **{worst_sector_return:.2f}%**.
+
+This dispersion between sector leaders and laggards is particularly important from a sector-rotation perspective because it highlights where market momentum was concentrated.
+
+"""
+
+
+# ============================================================
+# SECTOR PERFORMANCE TABLE
+# ============================================================
+
+markdown += """## Sector Performance
+
+| Sector | Monthly Return |
+|---|---:|
+"""
+
+
+# Sort sectors by performance
+sorted_sectors = sorted(
+    sector_returns.items(),
+    key=lambda x: x[1],
+    reverse=True
+)
+
+
+for sector, value in sorted_sectors:
+
+    if sector.lower() == "nifty50":
         continue
 
     markdown += (
-        f"| {title_sector(sector)} "
-        f"| {format_return(value)} |\n"
+        f"| {sector.title()} | "
+        f"{float(value):.2f}% |\n"
     )
+
+
+markdown += "\n"
+
+
+# ============================================================
+# SECTOR ROTATION ANALYSIS
+# ============================================================
+
+markdown += """## Sector Rotation Analysis
+
+The monthly return distribution shows where market leadership was concentrated.
+
+Strong-performing sectors can indicate areas receiving stronger investor interest, while weaker sectors may indicate relative underperformance or rotation away from previous leadership.
+
+Rather than looking at individual stocks in isolation, sector rotation analysis helps identify broader market trends and changes in relative strength.
+
+"""
 
 
 # ============================================================
 # TOP STOCKS
 # ============================================================
 
-markdown += """
----
+markdown += """## Top-Performing Stocks by Sector
 
-## Top Performing Stocks
+The following stocks were the top performers within each sector according to the project's monthly stock-ranking analysis.
 
 """
 
 
-if top_stocks:
+for sector in sorted(
+    top_stocks.keys()
+):
 
-    for sector, companies in top_stocks.items():
-
-        markdown += (
-            f"### {title_sector(sector)}\n\n"
-        )
-
-        if companies:
-
-            for company in companies:
-
-                markdown += (
-                    f"- {company}\n"
-                )
-
-        else:
-
-            markdown += (
-                "- No top stocks available.\n"
-            )
-
-        markdown += "\n"
-
-else:
+    companies = top_stocks[sector]
 
     markdown += (
-        "No monthly stock-ranking data "
-        "was available for this report.\n\n"
+        f"### {sector.title()}\n\n"
     )
+
+    if companies:
+
+        for rank, company in enumerate(
+            companies,
+            start=1
+        ):
+
+            markdown += (
+                f"{rank}. {company}\n"
+            )
+
+    else:
+
+        markdown += (
+            "No stock-level data available.\n"
+        )
+
+    markdown += "\n"
+
+
+# ============================================================
+# BOTTOM STOCKS
+# ============================================================
+
+markdown += """## Weakest-Performing Stocks by Sector
+
+The weakest stocks provide another perspective on the dispersion within each sector.
+
+"""
+
+
+for sector in sorted(
+    bottom_stocks.keys()
+):
+
+    companies = bottom_stocks[sector]
+
+    markdown += (
+        f"### {sector.title()}\n\n"
+    )
+
+    if companies:
+
+        for rank, company in enumerate(
+            companies,
+            start=1
+        ):
+
+            markdown += (
+                f"{rank}. {company}\n"
+            )
+
+    else:
+
+        markdown += (
+            "No stock-level data available.\n"
+        )
+
+    markdown += "\n"
 
 
 # ============================================================
 # KEY TAKEAWAYS
 # ============================================================
 
-markdown += f"""---
+markdown += """## Key Takeaways
 
-## Key Takeaways
+- Sector performance varied significantly during the month.
+- The strongest sector represented the month's primary area of relative strength.
+- The weakest sector represented the month's main area of relative weakness.
+- Stock-level rankings help identify the companies driving sector performance.
+- Comparing sector returns against the NIFTY 50 provides useful context for evaluating relative performance.
+- Tracking these changes month after month can help identify longer-term sector-rotation regimes.
 
-- The NIFTY 50 returned **{format_return(nifty50_return)}** during {month}.
-- **{title_sector(best_sector)}** was the strongest-performing sector at **{format_return(best_sector_return)}**.
-- **{title_sector(worst_sector)}** was the weakest-performing sector at **{format_return(worst_sector_return)}**.
-- Sector performance showed differing levels of leadership and weakness across the market.
-
-These observations are based on the monthly sector-return data generated by the research pipeline and do not represent a prediction of future market performance.
-
----
-
-## Methodology
-
-This report was generated using the **Indian Equity Sector Rotation Research Pipeline**.
-
-The pipeline is designed to:
-
-1. Collect market and sector data.
-2. Calculate monthly sector returns.
-3. Analyze and rank stocks within sector universes.
-4. Generate structured monthly research reports.
-5. Automatically convert the monthly report into a Markdown research article.
-
-The analysis is based on the data available to the research pipeline for the selected month.
-
----
-
-*Generated automatically using the Indian Equity Sector Rotation Research Pipeline.*
 """
 
 
 # ============================================================
-# CREATE BLOG DIRECTORY
+# METHODOLOGY
 # ============================================================
 
-os.makedirs(
-    BLOGS_FOLDER,
-    exist_ok=True
-)
+markdown += """## Methodology
+
+This report is generated automatically using the **Indian Equity Sector Rotation Research** pipeline.
+
+The pipeline combines:
+
+- Indian equity index data
+- Monthly sector returns
+- Stock-level monthly returns
+- Sector-wise stock rankings
+- Top and bottom stock summaries
+- Automated monthly reporting
+
+The analysis is intended for research and educational purposes and should not be interpreted as investment advice.
+
+"""
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+markdown += f"""---
+
+*Generated automatically by the Indian Equity Sector Rotation Research Pipeline.*
+
+**Report:** {month}
+
+**Data period:** 2026
+
+"""
 
 
 # ============================================================
@@ -381,26 +441,25 @@ with open(
     encoding="utf-8"
 ) as file:
 
-    file.write(
-        markdown
-    )
+    file.write(markdown)
 
 
 # ============================================================
-# FINAL OUTPUT
+# COMPLETE
 # ============================================================
 
-print("==============================================")
+print()
+print("==========================================")
 print("BLOG GENERATED SUCCESSFULLY")
-print("==============================================")
+print("==========================================")
 print()
 
-print("Source report:")
-print(REPORT_PATH)
+print(
+    f"Blog saved to:"
+)
 
-print()
-
-print("Blog saved to:")
-print(BLOG_PATH)
+print(
+    BLOG_PATH
+)
 
 print()

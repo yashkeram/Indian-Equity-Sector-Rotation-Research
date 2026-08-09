@@ -1,49 +1,39 @@
 import os
 import pandas as pd
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-
+import yfinance as yf
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-UNIVERSE_FOLDER = "Data/Universe"
-RAW_FOLDER = "Data/Raw"
-PROCESSED_FOLDER = "Data/Processed"
-CHART_FOLDER = "Outputs/Charts"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-TARGET_DATE = "2026-07-31"
+UNIVERSE_FOLDER = os.path.join(
+    BASE_DIR, "..", "Data", "Universe"
+)
 
+PROCESSED_FOLDER = os.path.join(
+    BASE_DIR, "..", "Data", "Processed"
+)
+
+MONTH = "Jul"
+
+START_DATE = "2026-07-01"
+END_DATE = "2026-08-01"
 
 # ============================================================
-# CREATE OUTPUT DIRECTORIES
+# CREATE / VALIDATE DIRECTORIES
 # ============================================================
 
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-os.makedirs(CHART_FOLDER, exist_ok=True)
-
-
-# ============================================================
-# VALIDATE INPUT DIRECTORIES
-# ============================================================
 
 if not os.path.exists(UNIVERSE_FOLDER):
     raise FileNotFoundError(
-        f"Universe folder not found: {UNIVERSE_FOLDER}"
+        f"Universe folder not found:\n{UNIVERSE_FOLDER}"
     )
-
-if not os.path.exists(RAW_FOLDER):
-    raise FileNotFoundError(
-        f"Raw data folder not found: {RAW_FOLDER}"
-    )
-
 
 # ============================================================
-# LOAD UNIVERSE
+# FIND UNIVERSE FILES
 # ============================================================
 
 universe_files = [
@@ -54,343 +44,361 @@ universe_files = [
 
 if not universe_files:
     raise FileNotFoundError(
-        f"No CSV files found in {UNIVERSE_FOLDER}"
+        f"No CSV files found in:\n{UNIVERSE_FOLDER}"
     )
 
+print("==========================================")
+print("MODULE 04 - JULY STOCK ANALYSIS")
+print("==========================================")
+print()
 
-print("Loading stock universe...")
+# ============================================================
+# IDENTIFY COLUMNS
+# ============================================================
 
-universe_data = []
+def find_column(df, possible_names):
 
-for universe_file in universe_files:
+    for column in possible_names:
+        if column in df.columns:
+            return column
 
-    file_path = os.path.join(
+    return None
+
+
+# ============================================================
+# PROCESS EACH SECTOR
+# ============================================================
+
+for universe_file in sorted(universe_files):
+
+    sector = universe_file.replace(".csv", "")
+
+    universe_path = os.path.join(
         UNIVERSE_FOLDER,
         universe_file
     )
 
-    df = pd.read_csv(file_path)
+    print("------------------------------------------")
+    print(f"Processing sector: {sector.upper()}")
+    print("------------------------------------------")
 
-    df["source_file"] = universe_file
+    # --------------------------------------------------------
+    # LOAD UNIVERSE
+    # --------------------------------------------------------
 
-    universe_data.append(df)
+    universe = pd.read_csv(universe_path)
 
-
-universe = pd.concat(
-    universe_data,
-    ignore_index=True
-)
-
-
-print(f"Universe records loaded: {len(universe)}")
-
-
-# ============================================================
-# DISPLAY UNIVERSE COLUMNS
-# ============================================================
-
-print()
-print("Universe columns:")
-print(list(universe.columns))
-print()
-
-
-# ============================================================
-# IDENTIFY STOCK/TICKER COLUMN
-# ============================================================
-
-ticker_column = None
-
-possible_ticker_columns = [
-    "Ticker",
-    "ticker",
-    "Symbol",
-    "symbol",
-    "Stock",
-    "stock",
-    "Code",
-    "code"
-]
-
-for column in possible_ticker_columns:
-
-    if column in universe.columns:
-        ticker_column = column
-        break
-
-
-# ============================================================
-# LOAD RAW SECTOR DATA
-# ============================================================
-
-print("Loading sector data...")
-
-sector_results = []
-
-raw_files = [
-    file
-    for file in os.listdir(RAW_FOLDER)
-    if file.endswith(".csv")
-]
-
-
-for file in raw_files:
-
-    file_path = os.path.join(
-        RAW_FOLDER,
-        file
+    company_column = find_column(
+        universe,
+        [
+            "Company",
+            "company",
+            "Name",
+            "name",
+            "Stock",
+            "stock"
+        ]
     )
 
-    try:
-
-        df = pd.read_csv(file_path)
-
-        if "Date" not in df.columns:
-            continue
-
-        if "Close" not in df.columns:
-            continue
-
-        df["Date"] = pd.to_datetime(
-            df["Date"],
-            errors="coerce"
-        )
-
-        df["Close"] = pd.to_numeric(
-            df["Close"],
-            errors="coerce"
-        )
-
-        df = df.dropna(
-            subset=["Date", "Close"]
-        )
-
-        if df.empty:
-            continue
-
-        df = df.sort_values("Date")
-
-        # July month-end price
-        july_data = df[
-            df["Date"] <= pd.Timestamp(TARGET_DATE)
+    ticker_column = find_column(
+        universe,
+        [
+            "Ticker",
+            "ticker",
+            "Symbol",
+            "symbol",
+            "Code",
+            "code"
         ]
+    )
 
-        if july_data.empty:
-            continue
+    if ticker_column is None:
+        print(
+            f"No ticker column found in {universe_file}. Skipping."
+        )
+        continue
 
-        july_close = july_data.iloc[-1]["Close"]
-
-        # Previous month-end
-        previous_data = df[
-            df["Date"] < pd.Timestamp("2026-07-01")
-        ]
-
-        if previous_data.empty:
-            continue
-
-        previous_close = previous_data.iloc[-1]["Close"]
-
-        july_return = (
-            (july_close / previous_close) - 1
-        ) * 100
-
-        sector_name = file.replace(
-            ".csv",
-            ""
+    if company_column is None:
+        print(
+            f"No company column found in {universe_file}. "
+            "Using ticker as company name."
         )
 
-        sector_results.append(
-            {
-                "sector": sector_name,
-                "june_close": previous_close,
-                "july_close": july_close,
-                "july_return_pct": july_return
-            }
-        )
+        universe["Company"] = universe[ticker_column]
 
-    except Exception as error:
+        company_column = "Company"
+
+    # --------------------------------------------------------
+    # CLEAN UNIVERSE
+    # --------------------------------------------------------
+
+    universe = universe[
+        [company_column, ticker_column]
+    ].copy()
+
+    universe.columns = [
+        "Company",
+        "Ticker"
+    ]
+
+    universe = universe.dropna(
+        subset=["Ticker"]
+    )
+
+    universe["Ticker"] = (
+        universe["Ticker"]
+        .astype(str)
+        .str.strip()
+    )
+
+    universe = universe[
+        universe["Ticker"] != ""
+    ]
+
+    universe = universe.drop_duplicates(
+        subset=["Ticker"]
+    )
+
+    print(
+        f"Stocks in universe: {len(universe)}"
+    )
+
+    # --------------------------------------------------------
+    # LOAD EXISTING RANKING FILE
+    # --------------------------------------------------------
+
+    ranking_file = os.path.join(
+        PROCESSED_FOLDER,
+        f"{sector}_ranking.csv"
+    )
+
+    if os.path.exists(ranking_file):
+
+        ranking = pd.read_csv(
+            ranking_file
+        )
 
         print(
-            f"Skipping {file}: {error}"
+            f"Existing ranking file found: "
+            f"{sector}_ranking.csv"
         )
 
+    else:
 
-# ============================================================
-# CREATE SECTOR ANALYSIS DATAFRAME
-# ============================================================
+        print(
+            "Existing ranking file not found. "
+            "Creating new file."
+        )
 
-if not sector_results:
+        ranking = universe.copy()
 
-    raise ValueError(
-        "No valid sector data was found for July 2026."
+    # --------------------------------------------------------
+    # DOWNLOAD JULY RETURNS
+    # --------------------------------------------------------
+
+    results = []
+
+    for _, row in universe.iterrows():
+
+        company = row["Company"]
+        ticker = row["Ticker"]
+
+        print(
+            f"  Downloading {company} ({ticker})..."
+        )
+
+        try:
+
+            data = yf.download(
+                ticker,
+                start=START_DATE,
+                end=END_DATE,
+                auto_adjust=True,
+                progress=False
+            )
+
+            if data.empty:
+                print(
+                    f"    No data available for {ticker}"
+                )
+                continue
+
+            # ------------------------------------------------
+            # Handle yfinance MultiIndex
+            # ------------------------------------------------
+
+            if isinstance(
+                data.columns,
+                pd.MultiIndex
+            ):
+
+                try:
+                    close = data[
+                        ("Close", ticker)
+                    ]
+
+                except Exception:
+
+                    close = data[
+                        "Close"
+                    ]
+
+                    if isinstance(
+                        close,
+                        pd.DataFrame
+                    ):
+                        close = close.iloc[:, 0]
+
+            else:
+
+                close = data["Close"]
+
+            close = pd.to_numeric(
+                close,
+                errors="coerce"
+            )
+
+            close = close.dropna()
+
+            if close.empty:
+                print(
+                    f"    No valid closing prices for {ticker}"
+                )
+                continue
+
+            # ------------------------------------------------
+            # July first available close
+            # ------------------------------------------------
+
+            july_start_close = float(
+                close.iloc[0]
+            )
+
+            # ------------------------------------------------
+            # July last available close
+            # ------------------------------------------------
+
+            july_end_close = float(
+                close.iloc[-1]
+            )
+
+            # ------------------------------------------------
+            # July return
+            # ------------------------------------------------
+
+            july_return = (
+                (
+                    july_end_close
+                    /
+                    july_start_close
+                ) - 1
+            ) * 100
+
+            results.append(
+                {
+                    "Company": company,
+                    "Ticker": ticker,
+                    "Jul": round(
+                        july_return,
+                        2
+                    )
+                }
+            )
+
+            print(
+                f"    July return: "
+                f"{july_return:.2f}%"
+            )
+
+        except Exception as error:
+
+            print(
+                f"    Error downloading "
+                f"{ticker}: {error}"
+            )
+
+    # ========================================================
+    # CHECK RESULTS
+    # ========================================================
+
+    if not results:
+
+        print(
+            f"No July results generated for {sector}."
+        )
+
+        continue
+
+    july_results = pd.DataFrame(
+        results
     )
 
+    # ========================================================
+    # UPDATE EXISTING RANKING FILE
+    # ========================================================
 
-sector_analysis = pd.DataFrame(
-    sector_results
-)
+    # Remove old Jul column if it exists
+    if MONTH in ranking.columns:
 
+        ranking = ranking.drop(
+            columns=[MONTH]
+        )
 
-sector_analysis = sector_analysis.sort_values(
-    "july_return_pct",
-    ascending=False
-)
+    # Merge July returns
+    ranking = ranking.merge(
+        july_results[
+            ["Company", "Ticker", MONTH]
+        ],
+        on=["Company", "Ticker"],
+        how="left"
+    )
 
+    # ========================================================
+    # SORT BY JULY PERFORMANCE
+    # ========================================================
 
-# ============================================================
-# SAVE SECTOR ANALYSIS
-# ============================================================
+    ranking[MONTH] = pd.to_numeric(
+        ranking[MONTH],
+        errors="coerce"
+    )
 
-sector_output = os.path.join(
-    PROCESSED_FOLDER,
-    "july_2026_sector_analysis.csv"
-)
+    ranking = ranking.sort_values(
+        by=MONTH,
+        ascending=False,
+        na_position="last"
+    )
 
+    # ========================================================
+    # SAVE
+    # ========================================================
 
-sector_analysis.to_csv(
-    sector_output,
-    index=False
-)
+    ranking.to_csv(
+        ranking_file,
+        index=False
+    )
 
+    print()
+    print(
+        f"Updated: {ranking_file}"
+    )
 
-# ============================================================
-# DISPLAY SECTOR RESULTS
-# ============================================================
+    print(
+        f"July stocks calculated: "
+        f"{ranking[MONTH].notna().sum()}"
+    )
 
-print()
-print("==========================================")
-print("JULY 2026 SECTOR ANALYSIS")
-print("==========================================")
-print(
-    sector_analysis[
-        [
-            "sector",
-            "july_return_pct"
-        ]
-    ].round(2)
-)
-print()
-
-
-# ============================================================
-# IDENTIFY STRONGEST / WEAKEST SECTORS
-# ============================================================
-
-strongest_sector = sector_analysis.iloc[0]
-
-weakest_sector = sector_analysis.iloc[-1]
-
-
-print(
-    f"Strongest sector: "
-    f"{strongest_sector['sector']} "
-    f"({strongest_sector['july_return_pct']:.2f}%)"
-)
-
-print(
-    f"Weakest sector: "
-    f"{weakest_sector['sector']} "
-    f"({weakest_sector['july_return_pct']:.2f}%)"
-)
-
-
-# ============================================================
-# CREATE SECTOR PERFORMANCE CHART
-# ============================================================
-
-plt.figure(figsize=(10, 6))
-
-plot_data = sector_analysis.sort_values(
-    "july_return_pct"
-)
-
-plt.bar(
-    plot_data["sector"],
-    plot_data["july_return_pct"]
-)
-
-plt.axhline(
-    0,
-    linewidth=0.8
-)
-
-plt.title(
-    "Sector Performance - July 2026"
-)
-
-plt.xlabel("Sector")
-
-plt.ylabel(
-    "July Return (%)"
-)
-
-plt.xticks(
-    rotation=45,
-    ha="right"
-)
-
-plt.tight_layout()
-
-
-chart_output = os.path.join(
-    CHART_FOLDER,
-    "july_2026_sector_analysis.png"
-)
-
-
-plt.savefig(
-    chart_output,
-    dpi=300,
-    bbox_inches="tight"
-)
-
-plt.close()
-
-
-# ============================================================
-# SAVE SUMMARY
-# ============================================================
-
-summary = pd.DataFrame(
-    [
-        {
-            "month": TARGET_DATE,
-            "strongest_sector":
-                strongest_sector["sector"],
-            "strongest_return_pct":
-                strongest_sector["july_return_pct"],
-            "weakest_sector":
-                weakest_sector["sector"],
-            "weakest_return_pct":
-                weakest_sector["july_return_pct"],
-            "sectors_analyzed":
-                len(sector_analysis)
-        }
-    ]
-)
-
-
-summary_output = os.path.join(
-    PROCESSED_FOLDER,
-    "july_2026_analysis_summary.csv"
-)
-
-
-summary.to_csv(
-    summary_output,
-    index=False
-)
-
+    print()
 
 # ============================================================
 # COMPLETE
 # ============================================================
 
+print("==========================================")
+print("MODULE 04 COMPLETED")
+print("==========================================")
 print()
-print("Module 04 completed successfully.")
+print("July returns have been added to the")
+print("existing *_ranking.csv files.")
 print()
-print("Generated files:")
-print(f" - {sector_output}")
-print(f" - {summary_output}")
-print(f" - {chart_output}")
+print("No July-specific ranking CSV was created.")
 print()

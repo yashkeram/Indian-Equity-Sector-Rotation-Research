@@ -1,5 +1,6 @@
 {
     "month": "July 2026",
+    "year": 2026,
     "nifty50_return": 2.17,
     "best_sector": "it",
     "best_sector_return": 16.77,
@@ -15,5 +16,78 @@
         "pharma": 4.77,
         "realty": 10.75
     },
-    "top_stocks": {}
+    "top_stocks": {
+        "auto": [
+            "TVS Motor",
+            "Bajaj Auto",
+            "Hero MotoCorp"
+        ],
+        "bank": [
+            "Federal Bank",
+            "IndusInd Bank",
+            "ICICI Bank"
+        ],
+        "fmcg": [
+            "Britannia",
+            "Nestle India",
+            "Marico"
+        ],
+        "it": [
+            "HCL Tech",
+            "Persistent Systems",
+            "Coforge"
+        ],
+        "metal": [
+            "Jindal Steel",
+            "JSW Steel",
+            "NALCO"
+        ],
+        "pharma": [
+            "Divis Lab",
+            "Sun Pharma",
+            "Aurobindo"
+        ],
+        "realty": [
+            "Macrotech Developers",
+            "Brigade Enterprises",
+            "Godrej Properties"
+        ]
+    },
+    "bottom_stocks": {
+        "auto": [
+            "Maruti Suzuki",
+            "Ashok Leyland",
+            "Mahindra & Mahindra"
+        ],
+        "bank": [
+            "Axis Bank",
+            "HDFC Bank",
+            "Kotak Mahindra Bank"
+        ],
+        "fmcg": [
+            "Dabur",
+            "HUL",
+            "ITC"
+        ],
+        "it": [
+            "Wipro",
+            "Infosys",
+            "TCS"
+        ],
+        "metal": [
+            "Vedanta",
+            "SAIL",
+            "Tata Steel"
+        ],
+        "pharma": [
+            "Dr Reddy",
+            "Mankind",
+            "Cipla"
+        ],
+        "realty": [
+            "Phoenix Mills",
+            "Sobha",
+            "Prestige Estates"
+        ]
+    }
 }
