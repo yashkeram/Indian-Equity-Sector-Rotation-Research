@@ -1,9 +1,9 @@
-Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul
-Federal Bank,FEDERALBNK.NS,,4.21,-13.49,10.62,0.7,14.22,8.28
-IndusInd Bank,INDUSINDBK.NS,,6.77,-21.35,21.74,-0.19,1.24,7.52
-ICICI Bank,ICICIBANK.NS,,1.76,-12.55,4.77,-0.55,9.46,4.03
-AU Small Finance Bank,AUBANK.NS,,-2.44,-12.07,20.56,-3.08,5.32,-0.29
-State Bank of India,SBIN.NS,,11.56,-18.5,9.09,-8.11,6.48,-1.91
-Kotak Mahindra Bank,KOTAKBANK.NS,,1.76,-14.88,8.46,0.23,2.1,-2.37
-HDFC Bank,HDFCBANK.NS,,-4.47,-17.6,5.49,-3.52,8.94,-6.03
-Axis Bank,AXISBANK.NS,,0.99,-16.08,9.21,1.44,4.59,-10.1
+Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul,Oct,Sep,Aug
+Kotak Mahindra Bank,KOTAKBANK.NS,,,,,,,,10.7,-0.57,7.46
+Axis Bank,AXISBANK.NS,,,,,,,,-0.73,-5.69,5.73
+AU Small Finance Bank,AUBANK.NS,,,,,,,,-14.48,-6.99,3.71
+State Bank of India,SBIN.NS,,,,,,,,0.24,-9.48,3.17
+ICICI Bank,ICICIBANK.NS,,,,,,,,5.77,-9.1,2.15
+IndusInd Bank,INDUSINDBK.NS,,,,,,,,-7.03,-11.33,0.41
+Federal Bank,FEDERALBNK.NS,,,,,,,,7.03,-11.02,-0.26
+HDFC Bank,HDFCBANK.NS,,,,,,,,-2.24,-0.04,-5.23

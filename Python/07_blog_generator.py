@@ -1,465 +1,464 @@
-import os
+
+from pathlib import Path
 import sys
 import json
 
 
 # ============================================================
-# MODULE 07 - BLOG GENERATOR
+# PROJECT PATHS
 # ============================================================
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+REPORT_DIR = BASE_DIR / "Data" / "Reports"
+RANKING_DIR = BASE_DIR / "Data" / "Processed"
+BLOG_DIR = BASE_DIR / "Blogs" / "2026"
+CHART_DIR = BASE_DIR / "Charts"
+
+BLOG_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ============================================================
-# PATHS
+# CONFIGURATION
 # ============================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+YEAR = 2026
 
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(BASE_DIR, "..")
-)
+MONTHS = [
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December"
+]
 
-REPORTS_FOLDER = os.path.join(
-    PROJECT_ROOT,
-    "Data",
-    "Reports"
-)
-
-BLOGS_FOLDER = os.path.join(
-    PROJECT_ROOT,
-    "Blogs",
-    "2026"
-)
-
-
-# Create blog directory
-os.makedirs(
-    BLOGS_FOLDER,
-    exist_ok=True
-)
+SECTOR_NAMES = {
+    "nifty50": "NIFTY 50",
+    "auto": "Auto",
+    "bank": "Bank",
+    "fmcg": "FMCG",
+    "it": "IT",
+    "metal": "Metal",
+    "pharma": "Pharma",
+    "realty": "Realty",
+}
 
 
 # ============================================================
 # MONTH INPUT
 # ============================================================
 
-if len(sys.argv) != 2:
+def get_month():
 
-    print()
-    print("Usage:")
-    print("python Python\\07_blog_generator.py July")
-    print()
+    if len(sys.argv) != 2:
+        print(
+            "\nUsage:\n"
+            "python Python/07_blog_generator.py October"
+        )
+        raise SystemExit(1)
 
-    sys.exit(1)
+    month = sys.argv[1].strip().capitalize()
 
+    if month not in MONTHS:
+        raise ValueError(f"Invalid month: {month}")
 
-MONTH_NAME = sys.argv[1].strip().capitalize()
-
-
-MONTHS = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-]
-
-
-if MONTH_NAME not in MONTHS:
-
-    print(
-        f"Invalid month: {MONTH_NAME}"
-    )
-
-    sys.exit(1)
-
-
-# ============================================================
-# FILE NAMES
-# ============================================================
-
-REPORT_FILE = f"{MONTH_NAME}_2026.json"
-
-BLOG_FILE = f"{MONTH_NAME}.md"
-
-
-REPORT_PATH = os.path.join(
-    REPORTS_FOLDER,
-    REPORT_FILE
-)
-
-BLOG_PATH = os.path.join(
-    BLOGS_FOLDER,
-    BLOG_FILE
-)
-
-
-# ============================================================
-# DISPLAY
-# ============================================================
-
-print()
-print("==========================================")
-print("MODULE 07 - BLOG GENERATOR")
-print("==========================================")
-print()
-
-print(
-    f"Project Root : {PROJECT_ROOT}"
-)
-
-print(
-    f"Report       : {REPORT_PATH}"
-)
-
-print(
-    f"Blog Folder  : {BLOGS_FOLDER}"
-)
-
-print(
-    f"Month        : {MONTH_NAME} 2026"
-)
-
-print()
-
-
-# ============================================================
-# VALIDATE REPORT
-# ============================================================
-
-if not os.path.exists(REPORT_PATH):
-
-    raise FileNotFoundError(
-        f"Report not found:\n{REPORT_PATH}\n\n"
-        f"Run Module 06 first."
-    )
+    return month
 
 
 # ============================================================
 # LOAD REPORT
 # ============================================================
 
-print("Loading monthly report...")
+def load_report(month):
 
+    report_path = REPORT_DIR / f"{month}_{YEAR}.json"
 
-with open(
-    REPORT_PATH,
-    "r",
-    encoding="utf-8"
-) as file:
+    if not report_path.exists():
+        raise FileNotFoundError(
+            f"Monthly report not found: {report_path}\n"
+            "Run Module 06 first."
+        )
 
-    report = json.load(file)
+    with open(report_path, "r", encoding="utf-8") as file:
+        report = json.load(file)
 
+    required_fields = [
+        "month",
+        "nifty50_return",
+        "sector_returns",
+        "top_stocks",
+        "bottom_stocks",
+    ]
 
-# ============================================================
-# EXTRACT DATA
-# ============================================================
+    missing = [
+        field for field in required_fields
+        if field not in report
+    ]
 
-month = report["month"]
+    if missing:
+        raise ValueError(
+            f"Report is missing required fields: {missing}"
+        )
 
-nifty50_return = report.get(
-    "nifty50_return"
-)
-
-best_sector = report.get(
-    "best_sector",
-    "N/A"
-)
-
-best_sector_return = report.get(
-    "best_sector_return"
-)
-
-worst_sector = report.get(
-    "worst_sector",
-    "N/A"
-)
-
-worst_sector_return = report.get(
-    "worst_sector_return"
-)
-
-sector_returns = report.get(
-    "sector_returns",
-    {}
-)
-
-top_stocks = report.get(
-    "top_stocks",
-    {}
-)
-
-bottom_stocks = report.get(
-    "bottom_stocks",
-    {}
-)
+    return report
 
 
 # ============================================================
-# BLOG HEADER
+# FORMATTING HELPERS
 # ============================================================
 
-markdown = f"""# Indian Equity Sector Rotation Report — {month}
+def display_sector(sector):
+
+    key = str(sector).lower()
+
+    return SECTOR_NAMES.get(
+        key,
+        str(sector).title()
+    )
+
+
+def format_return(value):
+
+    if value is None:
+        return "N/A"
+
+    return f"{float(value):+.2f}%"
+
+
+def add_stock_section(markdown, heading, stock_data):
+
+    markdown += f"## {heading}\n\n"
+
+    for sector in sorted(stock_data):
+
+        companies = stock_data[sector]
+
+        markdown += (
+            f"### {display_sector(sector)}\n\n"
+        )
+
+        if not companies:
+            markdown += "No valid stock data available.\n\n"
+            continue
+
+        for rank, company in enumerate(companies, start=1):
+            markdown += f"{rank}. {company}\n"
+
+        markdown += "\n"
+
+    return markdown
+
+
+# ============================================================
+# CHART REFERENCES
+# ============================================================
+
+def add_charts(markdown, month):
+
+    month_slug = month.lower()
+
+    charts = [
+        (
+            f"{month_slug}_{YEAR}_sector_performance.png",
+            "Monthly sector performance",
+        ),
+        (
+            f"{month_slug}_{YEAR}_market_comparison.png",
+            "NIFTY 50 and sector performance comparison",
+        ),
+    ]
+
+    available = []
+
+    for filename, description in charts:
+
+        chart_path = CHART_DIR / filename
+
+        if chart_path.exists():
+            available.append((filename, description))
+
+    if not available:
+        return markdown
+
+    markdown += "## Performance Charts\n\n"
+
+    for filename, description in available:
+
+        relative_path = f"../../Charts/{filename}"
+
+        markdown += (
+            f"![{description}]({relative_path})\n\n"
+        )
+
+    return markdown
+
+
+# ============================================================
+# BUILD BLOG
+# ============================================================
+
+def build_blog(report, month):
+
+    report_month = report["month"]
+
+    nifty_return = float(report["nifty50_return"])
+
+    sector_returns = report["sector_returns"]
+
+    top_stocks = report["top_stocks"]
+
+    bottom_stocks = report["bottom_stocks"]
+
+    # Remove NIFTY 50 from sector rankings.
+    sector_only = {
+        sector: float(value)
+        for sector, value in sector_returns.items()
+        if sector.lower() != "nifty50"
+        and value is not None
+    }
+
+    if not sector_only:
+        raise ValueError("No sector returns available.")
+
+    sorted_sectors = sorted(
+        sector_only.items(),
+        key=lambda item: item[1],
+        reverse=True
+    )
+
+    best_sector = report["best_sector"]
+    worst_sector = report["worst_sector"]
+
+    best_return = float(report["best_sector_return"])
+    worst_return = float(report["worst_sector_return"])
+
+    best_relative = best_return - nifty_return
+    worst_relative = worst_return - nifty_return
+
+    markdown = f"""# Indian Equity Sector Rotation Report — {report_month}
 
 ## Market Overview
 
-The Indian equity market delivered a mixed performance during **{month}**, with different sectors showing significant differences in momentum.
+The Indian equity market delivered a mixed performance during **{report_month}**, with substantial differences in performance across sectors.
 
-"""
+The monthly analysis examines the NIFTY 50 benchmark, sector-level returns and stock-level performance to identify areas of relative market strength and weakness.
 
+## NIFTY 50 Performance
 
-# ============================================================
-# NIFTY 50
-# ============================================================
+The **NIFTY 50 returned {format_return(nifty_return)}** during {report_month}.
 
-if nifty50_return is not None:
+This benchmark provides a reference point for evaluating the relative performance of individual sectors.
 
-    markdown += f"""
-### NIFTY 50 Performance
-
-The **NIFTY 50** returned **{nifty50_return:.2f}%** during {month}.
-
-This provides the benchmark against which sector performance can be evaluated.
-
-"""
-
-
-# ============================================================
-# SECTOR LEADERSHIP
-# ============================================================
-
-markdown += f"""
 ## Sector Leadership
 
-The strongest-performing sector during {month} was **{best_sector.title()}**, delivering a monthly return of **{best_sector_return:.2f}%**.
+The strongest-performing sector was **{display_sector(best_sector)}**, returning **{format_return(best_return)}**.
 
-The weakest-performing sector was **{worst_sector.title()}**, which returned **{worst_sector_return:.2f}%**.
+It outperformed the NIFTY 50 by **{best_relative:+.2f} percentage points**.
 
-This dispersion between sector leaders and laggards is particularly important from a sector-rotation perspective because it highlights where market momentum was concentrated.
+The weakest-performing sector was **{display_sector(worst_sector)}**, returning **{format_return(worst_return)}**.
+
+It underperformed the NIFTY 50 by **{abs(worst_relative):.2f} percentage points**.
+
+## Sector Performance
+
+| Sector | Monthly Return | Difference vs NIFTY 50 |
+|---|---:|---:|
+"""
+
+    for sector, value in sorted_sectors:
+
+        relative = value - nifty_return
+
+        markdown += (
+            f"| {display_sector(sector)} "
+            f"| {format_return(value)} "
+            f"| {relative:+.2f} pp |\n"
+        )
+
+    markdown += """
+
+## Sector Rotation Analysis
+
+The monthly return distribution highlights differences in sector leadership.
+
+Sectors outperforming the NIFTY 50 demonstrated stronger relative performance during the month, while underperforming sectors lagged behind the benchmark.
+
+These differences provide useful observations for tracking changes in market leadership over time.
+
+However, a single month's return does not establish a persistent sector-rotation trend. Multiple months of observations are needed to assess whether relative strength is sustained.
 
 """
 
+    markdown = add_charts(markdown, month)
 
-# ============================================================
-# SECTOR PERFORMANCE TABLE
-# ============================================================
-
-markdown += """## Sector Performance
-
-| Sector | Monthly Return |
-|---|---:|
-"""
-
-
-# Sort sectors by performance
-sorted_sectors = sorted(
-    sector_returns.items(),
-    key=lambda x: x[1],
-    reverse=True
-)
-
-
-for sector, value in sorted_sectors:
-
-    if sector.lower() == "nifty50":
-        continue
-
-    markdown += (
-        f"| {sector.title()} | "
-        f"{float(value):.2f}% |\n"
+    markdown = add_stock_section(
+        markdown,
+        "Top-Performing Stocks by Sector",
+        top_stocks
     )
 
-
-markdown += "\n"
-
-
-# ============================================================
-# SECTOR ROTATION ANALYSIS
-# ============================================================
-
-markdown += """## Sector Rotation Analysis
-
-The monthly return distribution shows where market leadership was concentrated.
-
-Strong-performing sectors can indicate areas receiving stronger investor interest, while weaker sectors may indicate relative underperformance or rotation away from previous leadership.
-
-Rather than looking at individual stocks in isolation, sector rotation analysis helps identify broader market trends and changes in relative strength.
-
-"""
-
-
-# ============================================================
-# TOP STOCKS
-# ============================================================
-
-markdown += """## Top-Performing Stocks by Sector
-
-The following stocks were the top performers within each sector according to the project's monthly stock-ranking analysis.
-
-"""
-
-
-for sector in sorted(
-    top_stocks.keys()
-):
-
-    companies = top_stocks[sector]
-
-    markdown += (
-        f"### {sector.title()}\n\n"
+    markdown = add_stock_section(
+        markdown,
+        "Weakest-Performing Stocks by Sector",
+        bottom_stocks
     )
 
-    if companies:
+    # --------------------------------------------------------
+    # DATA QUALITY
+    # --------------------------------------------------------
 
-        for rank, company in enumerate(
-            companies,
-            start=1
-        ):
+    quality = report.get("data_quality", {})
 
+    warnings = quality.get("warnings", [])
+
+    missing_summaries = quality.get(
+        "missing_summaries",
+        []
+    )
+
+    markdown += """## Data Quality and Coverage
+
+Stock-level rankings are based on stocks with valid monthly return observations in the processed ranking files. Stocks without valid price data may be excluded from the rankings.
+
+"""
+
+    if quality:
+
+        markdown += (
+            f"- Report data-quality status: "
+            f"**{quality.get('status', 'Not specified')}**\n"
+        )
+
+        markdown += (
+            f"- Sector summaries loaded: "
+            f"**{quality.get('loaded_summary_count', 'N/A')}/"
+            f"{quality.get('expected_summary_count', 'N/A')}**\n"
+        )
+
+        if missing_summaries:
             markdown += (
-                f"{rank}. {company}\n"
+                "- Missing summaries: "
+                + ", ".join(missing_summaries)
+                + "\n"
             )
+
+        if warnings:
+
+            markdown += "\n**Warnings:**\n\n"
+
+            for warning in warnings:
+                markdown += f"- {warning}\n"
 
     else:
 
         markdown += (
-            "No stock-level data available.\n"
+            "Detailed data-quality metadata was not available "
+            "in the monthly JSON report.\n"
         )
 
-    markdown += "\n"
+    markdown += """
 
-
-# ============================================================
-# BOTTOM STOCKS
-# ============================================================
-
-markdown += """## Weakest-Performing Stocks by Sector
-
-The weakest stocks provide another perspective on the dispersion within each sector.
+## Key Takeaways
 
 """
-
-
-for sector in sorted(
-    bottom_stocks.keys()
-):
-
-    companies = bottom_stocks[sector]
 
     markdown += (
-        f"### {sector.title()}\n\n"
+        f"- NIFTY 50 gained {format_return(nifty_return)}.\n"
+        f"- {display_sector(best_sector)} led sector performance "
+        f"with {format_return(best_return)}.\n"
+        f"- {display_sector(worst_sector)} was the weakest sector "
+        f"with {format_return(worst_return)}.\n"
+        "- Sector-level comparisons revealed differences in relative strength.\n"
+        "- Stock rankings provided additional insight into performance within each sector.\n"
+        "- Continued monthly tracking can help identify persistent changes in sector leadership.\n"
     )
 
-    if companies:
+    markdown += f"""
 
-        for rank, company in enumerate(
-            companies,
-            start=1
-        ):
+## Methodology
 
-            markdown += (
-                f"{rank}. {company}\n"
-            )
+This report was generated using the **Indian Equity Sector Rotation Research** pipeline.
 
-    else:
+The research workflow combines:
 
-        markdown += (
-            "No stock-level data available.\n"
-        )
-
-    markdown += "\n"
-
-
-# ============================================================
-# KEY TAKEAWAYS
-# ============================================================
-
-markdown += """## Key Takeaways
-
-- Sector performance varied significantly during the month.
-- The strongest sector represented the month's primary area of relative strength.
-- The weakest sector represented the month's main area of relative weakness.
-- Stock-level rankings help identify the companies driving sector performance.
-- Comparing sector returns against the NIFTY 50 provides useful context for evaluating relative performance.
-- Tracking these changes month after month can help identify longer-term sector-rotation regimes.
-
-"""
-
-
-# ============================================================
-# METHODOLOGY
-# ============================================================
-
-markdown += """## Methodology
-
-This report is generated automatically using the **Indian Equity Sector Rotation Research** pipeline.
-
-The pipeline combines:
-
-- Indian equity index data
-- Monthly sector returns
-- Stock-level monthly returns
+- Indian equity index price data
+- Monthly sector return calculations
+- Individual stock return analysis
 - Sector-wise stock rankings
 - Top and bottom stock summaries
-- Automated monthly reporting
+- Automated monthly JSON reporting
+- Markdown report generation
+
+Monthly returns are calculated using closing-price observations. Sector returns are evaluated against the NIFTY 50 benchmark.
 
 The analysis is intended for research and educational purposes and should not be interpreted as investment advice.
 
-"""
-
-
-# ============================================================
-# FOOTER
-# ============================================================
-
-markdown += f"""---
+---
 
 *Generated automatically by the Indian Equity Sector Rotation Research Pipeline.*
 
-**Report:** {month}
+**Report:** {report_month}
 
-**Data period:** 2026
+**Data period:** {YEAR}
 
 """
+
+
+    return markdown
 
 
 # ============================================================
 # SAVE BLOG
 # ============================================================
 
-with open(
-    BLOG_PATH,
-    "w",
-    encoding="utf-8"
-) as file:
+def save_blog(markdown, month):
 
-    file.write(markdown)
+    output_path = BLOG_DIR / f"{month}.md"
+
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        file.write(markdown)
+
+    return output_path
 
 
 # ============================================================
-# COMPLETE
+# MAIN
 # ============================================================
 
-print()
-print("==========================================")
-print("BLOG GENERATED SUCCESSFULLY")
-print("==========================================")
-print()
+def main():
 
-print(
-    f"Blog saved to:"
-)
+    print("=" * 50)
+    print("INDIAN EQUITY SECTOR ROTATION RESEARCH")
+    print("MODULE 07 - BLOG GENERATOR")
+    print("=" * 50)
 
-print(
-    BLOG_PATH
-)
+    month = get_month()
 
-print()
+    print(f"\nTarget month: {month} {YEAR}")
+
+    report = load_report(month)
+
+    markdown = build_blog(
+        report,
+        month
+    )
+
+    output_path = save_blog(
+        markdown,
+        month
+    )
+
+    print("\n" + "=" * 50)
+    print("BLOG GENERATED SUCCESSFULLY")
+    print("=" * 50)
+
+    print(f"\nBlog saved to:\n{output_path}")
+
+    print("\nMODULE 07 COMPLETED")
+
+
+if __name__ == "__main__":
+    main()

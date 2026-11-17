@@ -1,59 +1,24 @@
-import os
+
+from pathlib import Path
+
 import pandas as pd
 
+
 # ============================================================
-# MODULE 05 - STOCK SUMMARY
+# PROJECT PATHS
 # ============================================================
-#
-# Reads:
-#     Data/Processed/*_ranking.csv
-#
-# Creates:
-#     Data/Summary/January/
-#     Data/Summary/February/
-#     ...
-#     Data/Summary/July/
-#
-# Each month contains:
-#     <sector>_summary.csv
-#
-# Each summary contains:
-#     Company, Return, Rank
-#
-# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+RANKING_DIR = BASE_DIR / "Data" / "Processed"
+SUMMARY_DIR = BASE_DIR / "Data" / "Summary"
 
 
 # ============================================================
-# PROJECT PATH
+# CONFIGURATION
 # ============================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
-
-
-# ============================================================
-# FOLDERS
-# ============================================================
-
-RANKING_FOLDER = os.path.join(
-    BASE_DIR,
-    "Data",
-    "Processed"
-)
-
-SUMMARY_FOLDER = os.path.join(
-    BASE_DIR,
-    "Data",
-    "Summary"
-)
-
-
-# ============================================================
-# MONTHS
-# ============================================================
+YEAR = 2026
 
 MONTHS = [
     "Jan",
@@ -62,9 +27,11 @@ MONTHS = [
     "Apr",
     "May",
     "Jun",
-    "Jul"
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
 ]
-
 
 MONTH_NAMES = {
     "Jan": "January",
@@ -73,280 +40,308 @@ MONTH_NAMES = {
     "Apr": "April",
     "May": "May",
     "Jun": "June",
-    "Jul": "July"
+    "Jul": "July",
+    "Aug": "August",
+    "Sep": "September",
+    "Oct": "October",
 }
 
+TOP_COUNT = 3
+BOTTOM_COUNT = 3
+
 
 # ============================================================
-# VALIDATE INPUT FOLDER
+# VALIDATE INPUTS
 # ============================================================
 
-if not os.path.exists(RANKING_FOLDER):
-    raise FileNotFoundError(
-        f"Ranking folder not found:\n{RANKING_FOLDER}"
+def validate_directories():
+
+    if not RANKING_DIR.exists():
+        raise FileNotFoundError(
+            f"Ranking folder not found: {RANKING_DIR}"
+        )
+
+    ranking_files = sorted(
+        RANKING_DIR.glob("*_ranking.csv")
     )
 
+    if not ranking_files:
+        raise FileNotFoundError(
+            f"No ranking CSV files found in: {RANKING_DIR}"
+        )
 
-# ============================================================
-# FIND RANKING FILES
-# ============================================================
-
-ranking_files = [
-    file
-    for file in os.listdir(RANKING_FOLDER)
-    if file.endswith("_ranking.csv")
-]
-
-
-if not ranking_files:
-    raise FileNotFoundError(
-        f"No ranking CSV files found in:\n{RANKING_FOLDER}"
+    SUMMARY_DIR.mkdir(
+        parents=True,
+        exist_ok=True
     )
 
+    return ranking_files
+
 
 # ============================================================
-# START
+# LOAD RANKING DATA
 # ============================================================
 
-print()
-print("============================================================")
-print("MODULE 05 - STOCK SUMMARY")
-print("============================================================")
-print()
+def load_ranking(file_path):
 
-print(
-    f"Ranking folder: {RANKING_FOLDER}"
-)
+    df = pd.read_csv(file_path)
 
-print(
-    f"Summary folder: {SUMMARY_FOLDER}"
-)
+    if df.empty:
+        raise ValueError("Ranking file is empty.")
 
-print()
+    if "Company" not in df.columns:
+        raise ValueError(
+            "Required Company column is missing."
+        )
+
+    return df
+
 
 # ============================================================
-# PROCESS EACH SECTOR
+# CREATE MONTHLY SUMMARY
 # ============================================================
 
-for file in sorted(ranking_files):
+def create_monthly_summary(df, month):
 
-    sector = file.replace(
-        "_ranking.csv",
+    if month not in df.columns:
+        return None
+
+    temp = df[
+        ["Company", month]
+    ].copy()
+
+    temp["Company"] = (
+        temp["Company"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+
+    temp[month] = pd.to_numeric(
+        temp[month],
+        errors="coerce"
+    )
+
+    temp = temp[
+        (temp["Company"] != "")
+        & temp[month].notna()
+    ]
+
+    if temp.empty:
+        return None
+
+    # Remove duplicate company entries.
+    temp = temp.drop_duplicates(
+        subset=["Company"],
+        keep="first"
+    )
+
+    temp = temp.sort_values(
+        by=month,
+        ascending=False
+    )
+
+    # --------------------------------------------------------
+    # TOP PERFORMERS
+    # --------------------------------------------------------
+
+    top = temp.head(TOP_COUNT).copy()
+
+    top["Rank"] = [
+        f"Top {i}"
+        for i in range(1, len(top) + 1)
+    ]
+
+    # --------------------------------------------------------
+    # BOTTOM PERFORMERS
+    # --------------------------------------------------------
+
+    # Exclude top performers to prevent overlap.
+    remaining = temp.iloc[TOP_COUNT:].copy()
+
+    bottom = (
+        remaining
+        .sort_values(
+            by=month,
+            ascending=True
+        )
+        .head(BOTTOM_COUNT)
+        .copy()
+    )
+
+    bottom["Rank"] = [
+        f"Bottom {i}"
+        for i in range(1, len(bottom) + 1)
+    ]
+
+    # --------------------------------------------------------
+    # COMBINE RESULTS
+    # --------------------------------------------------------
+
+    summary = pd.concat(
+        [top, bottom],
+        ignore_index=True
+    )
+
+    summary = summary.rename(
+        columns={month: "Return"}
+    )
+
+    summary = summary[
+        ["Company", "Return", "Rank"]
+    ]
+
+    return summary
+
+
+# ============================================================
+# PROCESS ONE SECTOR
+# ============================================================
+
+def process_sector(file_path):
+
+    sector = file_path.stem.replace(
+        "_ranking",
         ""
     )
 
-    file_path = os.path.join(
-        RANKING_FOLDER,
-        file
-    )
+    print("\n" + "-" * 55)
+    print(f"PROCESSING: {sector.upper()}")
+    print("-" * 55)
 
-    print()
-    print("------------------------------------------------------------")
-    print(f"Processing sector: {sector.upper()}")
-    print("------------------------------------------------------------")
-
-    # --------------------------------------------------------
-    # READ RANKING FILE
-    # --------------------------------------------------------
-
-    df = pd.read_csv(file_path)
+    df = load_ranking(file_path)
 
     print(
         f"Stocks in ranking file: {len(df)}"
     )
 
-    # --------------------------------------------------------
-    # PROCESS EACH MONTH
-    # --------------------------------------------------------
+    generated = 0
+    skipped = 0
 
     for month in MONTHS:
 
-        # ----------------------------------------------------
-        # Check if month exists
-        # ----------------------------------------------------
+        summary = create_monthly_summary(
+            df,
+            month
+        )
 
-        if month not in df.columns:
+        if summary is None:
 
             print(
-                f"{month}: column not found - skipped"
+                f"{MONTH_NAMES[month]}: "
+                "No valid data - skipped"
             )
 
+            skipped += 1
             continue
-
-        # ----------------------------------------------------
-        # Select company and monthly return
-        # ----------------------------------------------------
-
-        temp = df[
-            [
-                "Company",
-                month
-            ]
-        ].copy()
-
-        # ----------------------------------------------------
-        # Convert return values to numbers
-        # ----------------------------------------------------
-
-        temp[month] = pd.to_numeric(
-            temp[month],
-            errors="coerce"
-        )
-
-        # ----------------------------------------------------
-        # Remove missing values
-        # ----------------------------------------------------
-
-        temp = temp.dropna(
-            subset=[month]
-        )
-
-        if temp.empty:
-
-            print(
-                f"{month}: no valid data - skipped"
-            )
-
-            continue
-
-        # ----------------------------------------------------
-        # Sort highest to lowest
-        # ----------------------------------------------------
-
-        temp = temp.sort_values(
-            by=month,
-            ascending=False
-        )
-
-        # ----------------------------------------------------
-        # TOP 3
-        # ----------------------------------------------------
-
-        top3 = temp.head(3).copy()
-
-        top3["Rank"] = [
-            "Top 1",
-            "Top 2",
-            "Top 3"
-        ][:len(top3)]
-
-        # ----------------------------------------------------
-        # BOTTOM 3
-        # ----------------------------------------------------
-
-        bottom3 = temp.tail(3).copy()
-
-        bottom3 = bottom3.sort_values(
-            by=month,
-            ascending=True
-        )
-
-        bottom3["Rank"] = [
-            "Bottom 1",
-            "Bottom 2",
-            "Bottom 3"
-        ][:len(bottom3)]
-
-        # ----------------------------------------------------
-        # COMBINE
-        # ----------------------------------------------------
-
-        summary = pd.concat(
-            [
-                top3,
-                bottom3
-            ],
-            ignore_index=True
-        )
-
-        # ----------------------------------------------------
-        # Rename monthly return column
-        # ----------------------------------------------------
-
-        summary = summary.rename(
-            columns={
-                month: "Return"
-            }
-        )
-
-        # ----------------------------------------------------
-        # Keep clean output structure
-        # ----------------------------------------------------
-
-        summary = summary[
-            [
-                "Company",
-                "Return",
-                "Rank"
-            ]
-        ]
-
-        # ----------------------------------------------------
-        # MONTH OUTPUT FOLDER
-        # ----------------------------------------------------
 
         month_name = MONTH_NAMES[month]
 
-        output_folder = os.path.join(
-            SUMMARY_FOLDER,
-            month_name
-        )
+        output_folder = SUMMARY_DIR / month_name
 
-        os.makedirs(
-            output_folder,
+        output_folder.mkdir(
+            parents=True,
             exist_ok=True
         )
 
-        # ----------------------------------------------------
-        # OUTPUT FILE
-        # ----------------------------------------------------
-
-        output_file = os.path.join(
-            output_folder,
+        output_file = (
+            output_folder /
             f"{sector}_summary.csv"
         )
-
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
 
         summary.to_csv(
             output_file,
             index=False
         )
 
+        generated += 1
+
         print(
-            f"{month_name:<10} -> "
-            f"{os.path.basename(output_file)}"
+            f"{month_name:<12} -> "
+            f"{output_file.name}"
         )
 
-
-# ============================================================
-# COMPLETE
-# ============================================================
-
-print()
-print("============================================================")
-print("MODULE 05 COMPLETED SUCCESSFULLY")
-print("============================================================")
-print()
-
-print("Months processed:")
-print(
-    "January, February, March, April, May, June, July"
-)
-
-print()
-
-print(
-    "July summaries saved to:"
-)
-
-print(
-    os.path.join(
-        SUMMARY_FOLDER,
-        "July"
+    print(
+        f"\nSummaries generated: {generated}"
     )
-)
 
-print()
+    print(
+        f"Months skipped: {skipped}"
+    )
+
+    return generated
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    print("=" * 55)
+    print("INDIAN EQUITY SECTOR ROTATION RESEARCH")
+    print("MODULE 05 - STOCK SUMMARY")
+    print("=" * 55)
+
+    print(f"\nAnalysis year: {YEAR}")
+    print(f"Months configured: {len(MONTHS)}")
+
+    ranking_files = validate_directories()
+
+    successful = 0
+    failed = 0
+    total_summaries = 0
+
+    for file_path in ranking_files:
+
+        try:
+
+            generated = process_sector(
+                file_path
+            )
+
+            successful += 1
+            total_summaries += generated
+
+        except Exception as error:
+
+            failed += 1
+
+            print(
+                f"\nFAILED: {file_path.name}"
+            )
+
+            print(
+                f"Reason: {error}"
+            )
+
+    print("\n" + "=" * 55)
+    print("MODULE 05 SUMMARY")
+    print("=" * 55)
+
+    print(
+        f"Successful sectors: {successful}"
+    )
+
+    print(
+        f"Failed sectors: {failed}"
+    )
+
+    print(
+        f"Total monthly summaries generated: "
+        f"{total_summaries}"
+    )
+
+    print(
+        f"\nOutput folder: {SUMMARY_DIR}"
+    )
+
+    print("\nMODULE 05 COMPLETED")
+
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    main()

@@ -1,59 +1,125 @@
-import os
+
+from pathlib import Path
+import sys
+import calendar
+
 import pandas as pd
 import yfinance as yf
+
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+UNIVERSE_DIR = BASE_DIR / "Data" / "Universe"
+PROCESSED_DIR = BASE_DIR / "Data" / "Processed"
+
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_TARGET_MONTH = "2026-10"
+LOOKBACK_DAYS = 15
 
-UNIVERSE_FOLDER = os.path.join(
-    BASE_DIR, "..", "Data", "Universe"
-)
-
-PROCESSED_FOLDER = os.path.join(
-    BASE_DIR, "..", "Data", "Processed"
-)
-
-MONTH = "Jul"
-
-START_DATE = "2026-07-01"
-END_DATE = "2026-08-01"
 
 # ============================================================
-# CREATE / VALIDATE DIRECTORIES
+# MONTH INPUT
 # ============================================================
 
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+def parse_target_month():
 
-if not os.path.exists(UNIVERSE_FOLDER):
-    raise FileNotFoundError(
-        f"Universe folder not found:\n{UNIVERSE_FOLDER}"
+    if len(sys.argv) > 2:
+        raise ValueError(
+            "Please provide only one month. "
+            "Example: python Python/04_stock_analysis.py September"
+        )
+
+    month_input = (
+        sys.argv[1].strip()
+        if len(sys.argv) == 2
+        else DEFAULT_TARGET_MONTH
     )
 
+    try:
+        # Accept YYYY-MM format.
+        if (
+            len(month_input) == 7
+            and month_input[4] == "-"
+        ):
+            period = pd.Period(month_input, freq="M")
+
+        else:
+            # Accept full month names and abbreviations.
+            month_name = month_input.strip().lower()
+
+            month_number = None
+
+            for number in range(1, 13):
+                full_name = calendar.month_name[number].lower()
+                short_name = calendar.month_abbr[number].lower()
+
+                if month_name in (full_name, short_name):
+                    month_number = number
+                    break
+
+            if month_number is None:
+                raise ValueError("Invalid month name.")
+
+            period = pd.Period(
+                year=2026,
+                month=month_number,
+                freq="M"
+            )
+
+        return period
+
+    except Exception as error:
+        raise ValueError(
+            "Invalid month input. Use a month name, "
+            "abbreviation, or YYYY-MM format."
+        ) from error
+
+
+target_period = parse_target_month()
+
+MONTH_COLUMN = target_period.strftime("%b")
+
+START_DATE = (
+    target_period.start_time.normalize()
+    - pd.Timedelta(days=LOOKBACK_DAYS)
+).strftime("%Y-%m-%d")
+
+END_DATE = (
+    (target_period + 1).start_time
+).strftime("%Y-%m-%d")
+
+
 # ============================================================
-# FIND UNIVERSE FILES
+# VALIDATE PROJECT DATA
 # ============================================================
 
-universe_files = [
-    file
-    for file in os.listdir(UNIVERSE_FOLDER)
-    if file.endswith(".csv")
-]
+if not UNIVERSE_DIR.exists():
+    raise FileNotFoundError(
+        f"Universe folder not found: {UNIVERSE_DIR}"
+    )
+
+universe_files = sorted(
+    UNIVERSE_DIR.glob("*.csv")
+)
 
 if not universe_files:
     raise FileNotFoundError(
-        f"No CSV files found in:\n{UNIVERSE_FOLDER}"
+        f"No universe CSV files found in: {UNIVERSE_DIR}"
     )
 
-print("==========================================")
-print("MODULE 04 - JULY STOCK ANALYSIS")
-print("==========================================")
-print()
 
 # ============================================================
-# IDENTIFY COLUMNS
+# IDENTIFY UNIVERSE COLUMNS
 # ============================================================
 
 def find_column(df, possible_names):
@@ -66,87 +132,49 @@ def find_column(df, possible_names):
 
 
 # ============================================================
-# PROCESS EACH SECTOR
+# LOAD AND CLEAN UNIVERSE
 # ============================================================
 
-for universe_file in sorted(universe_files):
+def load_universe(file_path):
 
-    sector = universe_file.replace(".csv", "")
+    universe = pd.read_csv(file_path)
 
-    universe_path = os.path.join(
-        UNIVERSE_FOLDER,
-        universe_file
-    )
-
-    print("------------------------------------------")
-    print(f"Processing sector: {sector.upper()}")
-    print("------------------------------------------")
-
-    # --------------------------------------------------------
-    # LOAD UNIVERSE
-    # --------------------------------------------------------
-
-    universe = pd.read_csv(universe_path)
+    if universe.empty:
+        raise ValueError("Universe file is empty.")
 
     company_column = find_column(
         universe,
-        [
-            "Company",
-            "company",
-            "Name",
-            "name",
-            "Stock",
-            "stock"
-        ]
+        ["Company", "company", "Name", "name", "Stock", "stock"]
     )
 
     ticker_column = find_column(
         universe,
-        [
-            "Ticker",
-            "ticker",
-            "Symbol",
-            "symbol",
-            "Code",
-            "code"
-        ]
+        ["Ticker", "ticker", "Symbol", "symbol", "Code", "code"]
     )
 
     if ticker_column is None:
-        print(
-            f"No ticker column found in {universe_file}. Skipping."
-        )
-        continue
+        raise ValueError("No ticker column found.")
 
     if company_column is None:
-        print(
-            f"No company column found in {universe_file}. "
-            "Using ticker as company name."
-        )
-
         universe["Company"] = universe[ticker_column]
-
         company_column = "Company"
-
-    # --------------------------------------------------------
-    # CLEAN UNIVERSE
-    # --------------------------------------------------------
 
     universe = universe[
         [company_column, ticker_column]
     ].copy()
 
-    universe.columns = [
-        "Company",
-        "Ticker"
-    ]
+    universe.columns = ["Company", "Ticker"]
 
-    universe = universe.dropna(
-        subset=["Ticker"]
+    universe["Company"] = (
+        universe["Company"]
+        .fillna(universe["Ticker"])
+        .astype(str)
+        .str.strip()
     )
 
     universe["Ticker"] = (
         universe["Ticker"]
+        .fillna("")
         .astype(str)
         .str.strip()
     )
@@ -156,47 +184,198 @@ for universe_file in sorted(universe_files):
     ]
 
     universe = universe.drop_duplicates(
-        subset=["Ticker"]
+        subset=["Ticker"],
+        keep="first"
     )
 
-    print(
-        f"Stocks in universe: {len(universe)}"
+    if universe.empty:
+        raise ValueError("No valid stock tickers found.")
+
+    return universe
+
+
+# ============================================================
+# DOWNLOAD STOCK PRICES
+# ============================================================
+
+def download_stock_return(ticker):
+
+    data = yf.download(
+        ticker,
+        start=START_DATE,
+        end=END_DATE,
+        auto_adjust=True,
+        progress=False
     )
 
-    # --------------------------------------------------------
-    # LOAD EXISTING RANKING FILE
-    # --------------------------------------------------------
+    if data.empty:
+        raise ValueError("No price data returned.")
 
-    ranking_file = os.path.join(
-        PROCESSED_FOLDER,
-        f"{sector}_ranking.csv"
+    # Handle yfinance MultiIndex columns.
+    if isinstance(data.columns, pd.MultiIndex):
+
+        if "Close" not in data.columns.get_level_values(0):
+            raise ValueError("Close price column not found.")
+
+        close = data["Close"]
+
+        if isinstance(close, pd.DataFrame):
+            close = close.iloc[:, 0]
+
+    else:
+
+        if "Close" not in data.columns:
+            raise ValueError("Close price column not found.")
+
+        close = data["Close"]
+
+    close = pd.to_numeric(
+        close,
+        errors="coerce"
     )
 
-    if os.path.exists(ranking_file):
+    close.index = pd.to_datetime(
+        close.index,
+        errors="coerce"
+    )
 
-        ranking = pd.read_csv(
-            ranking_file
+    close = close.dropna()
+    close = close[close.index.notna()]
+    close = close[close > 0]
+    close = close.sort_index()
+
+    close = close[
+        ~close.index.duplicated(keep="last")
+    ]
+
+    if close.empty:
+        raise ValueError("No valid positive closing prices.")
+
+    # Previous month's final available close.
+    previous_month_prices = close[
+        close.index < target_period.start_time
+    ]
+
+    # Target month's available prices.
+    target_month_prices = close[
+        close.index.to_period("M") == target_period
+    ]
+
+    if previous_month_prices.empty:
+        raise ValueError(
+            "Previous month's closing price unavailable."
         )
 
-        print(
-            f"Existing ranking file found: "
-            f"{sector}_ranking.csv"
+    if target_month_prices.empty:
+        raise ValueError(
+            "Target month's price data unavailable."
+        )
+
+    previous_close = float(
+        previous_month_prices.iloc[-1]
+    )
+
+    current_close = float(
+        target_month_prices.iloc[-1]
+    )
+
+    monthly_return = (
+        (current_close / previous_close) - 1
+    ) * 100
+
+    return round(monthly_return, 2)
+
+
+# ============================================================
+# LOAD EXISTING RANKING SAFELY
+# ============================================================
+
+def load_existing_ranking(ranking_file, universe):
+
+    if ranking_file.exists():
+
+        ranking = pd.read_csv(ranking_file)
+
+        if "Company" not in ranking.columns:
+            raise ValueError(
+                f"Company column missing in {ranking_file.name}"
+            )
+
+        if "Ticker" not in ranking.columns:
+            raise ValueError(
+                f"Ticker column missing in {ranking_file.name}"
+            )
+
+        ranking["Ticker"] = (
+            ranking["Ticker"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+        )
+
+        # Preserve existing rows and their historical values.
+        ranking = ranking.drop_duplicates(
+            subset=["Ticker"],
+            keep="first"
+        )
+
+        existing_tickers = set(
+            ranking["Ticker"]
+        )
+
+        # Add only genuinely new universe stocks.
+        new_stocks = universe[
+            ~universe["Ticker"].isin(existing_tickers)
+        ]
+
+        ranking = pd.concat(
+            [ranking, new_stocks],
+            ignore_index=True
         )
 
     else:
 
-        print(
-            "Existing ranking file not found. "
-            "Creating new file."
-        )
-
         ranking = universe.copy()
 
-    # --------------------------------------------------------
-    # DOWNLOAD JULY RETURNS
-    # --------------------------------------------------------
+    return ranking
 
+
+# ============================================================
+# PROCESS SECTORS
+# ============================================================
+
+def process_sector(universe_file):
+
+    sector = universe_file.stem.lower()
+
+    ranking_file = (
+        PROCESSED_DIR /
+        f"{sector}_ranking.csv"
+    )
+
+    print("\n" + "-" * 55)
+    print(f"SECTOR: {sector.upper()}")
+    print("-" * 55)
+
+    universe = load_universe(universe_file)
+
+    print(f"Stocks in universe: {len(universe)}")
+
+    # Load existing ranking without wiping history.
+    ranking = load_existing_ranking(
+        ranking_file,
+        universe
+    )
+
+    # Ensure target month column exists.
+    if MONTH_COLUMN not in ranking.columns:
+        ranking[MONTH_COLUMN] = pd.NA
+
+    # Download monthly returns.
     results = []
+
+    successful = 0
+    failed = 0
 
     for _, row in universe.iterrows():
 
@@ -204,201 +383,156 @@ for universe_file in sorted(universe_files):
         ticker = row["Ticker"]
 
         print(
-            f"  Downloading {company} ({ticker})..."
+            f"\nDownloading {company} ({ticker})..."
         )
 
         try:
 
-            data = yf.download(
-                ticker,
-                start=START_DATE,
-                end=END_DATE,
-                auto_adjust=True,
-                progress=False
+            monthly_return = download_stock_return(
+                ticker
             )
 
-            if data.empty:
-                print(
-                    f"    No data available for {ticker}"
-                )
-                continue
+            results.append({
+                "Ticker": ticker,
+                MONTH_COLUMN: monthly_return
+            })
 
-            # ------------------------------------------------
-            # Handle yfinance MultiIndex
-            # ------------------------------------------------
-
-            if isinstance(
-                data.columns,
-                pd.MultiIndex
-            ):
-
-                try:
-                    close = data[
-                        ("Close", ticker)
-                    ]
-
-                except Exception:
-
-                    close = data[
-                        "Close"
-                    ]
-
-                    if isinstance(
-                        close,
-                        pd.DataFrame
-                    ):
-                        close = close.iloc[:, 0]
-
-            else:
-
-                close = data["Close"]
-
-            close = pd.to_numeric(
-                close,
-                errors="coerce"
-            )
-
-            close = close.dropna()
-
-            if close.empty:
-                print(
-                    f"    No valid closing prices for {ticker}"
-                )
-                continue
-
-            # ------------------------------------------------
-            # July first available close
-            # ------------------------------------------------
-
-            july_start_close = float(
-                close.iloc[0]
-            )
-
-            # ------------------------------------------------
-            # July last available close
-            # ------------------------------------------------
-
-            july_end_close = float(
-                close.iloc[-1]
-            )
-
-            # ------------------------------------------------
-            # July return
-            # ------------------------------------------------
-
-            july_return = (
-                (
-                    july_end_close
-                    /
-                    july_start_close
-                ) - 1
-            ) * 100
-
-            results.append(
-                {
-                    "Company": company,
-                    "Ticker": ticker,
-                    "Jul": round(
-                        july_return,
-                        2
-                    )
-                }
-            )
+            successful += 1
 
             print(
-                f"    July return: "
-                f"{july_return:.2f}%"
+                f"Return: {monthly_return:.2f}%"
             )
 
         except Exception as error:
 
+            failed += 1
+
             print(
-                f"    Error downloading "
-                f"{ticker}: {error}"
+                f"FAILED: {ticker} — {error}"
             )
 
-    # ========================================================
-    # CHECK RESULTS
-    # ========================================================
-
+    # Validate results before saving.
     if not results:
-
-        print(
-            f"No July results generated for {sector}."
+        raise RuntimeError(
+            f"No stock returns generated for {sector}. "
+            "Existing ranking file was not changed."
         )
 
-        continue
+    monthly_results = pd.DataFrame(results)
 
-    july_results = pd.DataFrame(
-        results
-    )
+    # Update only successfully downloaded tickers.
+    # Failed downloads retain their previous values.
+    ranking = ranking.set_index("Ticker")
 
-    # ========================================================
-    # UPDATE EXISTING RANKING FILE
-    # ========================================================
+    monthly_results = monthly_results.set_index("Ticker")
 
-    # Remove old Jul column if it exists
-    if MONTH in ranking.columns:
+    for ticker, result in monthly_results.iterrows():
+        ranking.loc[ticker, MONTH_COLUMN] = result[MONTH_COLUMN]
 
-        ranking = ranking.drop(
-            columns=[MONTH]
-        )
+    ranking = ranking.reset_index()
 
-    # Merge July returns
-    ranking = ranking.merge(
-        july_results[
-            ["Company", "Ticker", MONTH]
-        ],
-        on=["Company", "Ticker"],
-        how="left"
-    )
+    # Keep Company and Ticker first.
+    first_columns = ["Company", "Ticker"]
 
-    # ========================================================
-    # SORT BY JULY PERFORMANCE
-    # ========================================================
+    other_columns = [
+        column
+        for column in ranking.columns
+        if column not in first_columns
+    ]
 
-    ranking[MONTH] = pd.to_numeric(
-        ranking[MONTH],
+    ranking = ranking[
+        first_columns + other_columns
+    ]
+
+    ranking[MONTH_COLUMN] = pd.to_numeric(
+        ranking[MONTH_COLUMN],
         errors="coerce"
     )
 
     ranking = ranking.sort_values(
-        by=MONTH,
+        by=MONTH_COLUMN,
         ascending=False,
         na_position="last"
     )
 
-    # ========================================================
-    # SAVE
-    # ========================================================
-
+    # Save ranking.
     ranking.to_csv(
         ranking_file,
         index=False
     )
 
-    print()
+    print("\nSector summary:")
+    print(f"Successful downloads: {successful}")
+    print(f"Failed downloads: {failed}")
+
     print(
-        f"Updated: {ranking_file}"
+        f"Stocks with returns: "
+        f"{ranking[MONTH_COLUMN].notna().sum()}"
     )
 
     print(
-        f"July stocks calculated: "
-        f"{ranking[MONTH].notna().sum()}"
+        f"Updated ranking: {ranking_file}"
     )
 
-    print()
 
 # ============================================================
-# COMPLETE
+# MAIN
 # ============================================================
 
-print("==========================================")
-print("MODULE 04 COMPLETED")
-print("==========================================")
-print()
-print("July returns have been added to the")
-print("existing *_ranking.csv files.")
-print()
-print("No July-specific ranking CSV was created.")
-print()
+def main():
+
+    print("=" * 55)
+    print("INDIAN EQUITY SECTOR ROTATION RESEARCH")
+    print("MODULE 04 - STOCK ANALYSIS")
+    print("=" * 55)
+
+    print(
+        f"\nTarget month: "
+        f"{target_period.strftime('%B %Y')}"
+    )
+
+    print(f"Month column: {MONTH_COLUMN}")
+    print(f"Download start: {START_DATE}")
+    print(f"Download end: {END_DATE}")
+
+    successful_sectors = 0
+    failed_sectors = 0
+
+    for universe_file in universe_files:
+
+        try:
+
+            process_sector(universe_file)
+            successful_sectors += 1
+
+        except Exception as error:
+
+            failed_sectors += 1
+
+            print(
+                f"\nSECTOR FAILED: {universe_file.stem}"
+            )
+
+            print(f"Reason: {error}")
+
+    print("\n" + "=" * 55)
+    print("MODULE 04 SUMMARY")
+    print("=" * 55)
+
+    print(f"Successful sectors: {successful_sectors}")
+    print(f"Failed sectors: {failed_sectors}")
+
+    print(
+        f"Target month: "
+        f"{target_period.strftime('%B %Y')}"
+    )
+
+    print("\nMODULE 04 COMPLETED")
+
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    main()

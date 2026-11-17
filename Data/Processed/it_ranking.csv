@@ -1,8 +1,9 @@
-Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul
-HCL Tech,HCLTECH.NS,,-18.08,-3.42,-8.91,-1.28,-9.46,31.57
-Persistent Systems,PERSISTENT.NS,,-21.57,3.05,-1.58,8.21,-16.71,28.59
-Coforge,COFORGE.NS,,-28.3,-6.0,7.28,18.89,3.09,25.84
-Tech Mahindra,TECHM.NS,,-22.1,1.93,6.47,0.71,-5.34,24.37
-TCS,TCS.NS,,-15.57,-10.56,4.88,-7.45,-10.07,19.97
-Infosys,INFY.NS,,-20.77,-3.81,-5.5,-1.77,-11.96,14.7
-Wipro,WIPRO.NS,,-15.17,-6.63,6.93,1.79,-16.58,9.18
+Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul,Oct,Sep,Aug
+Coforge,COFORGE.NS,,,,,,,,16.92,-11.9,15.63
+TCS,TCS.NS,,,,,,,,22.69,-14.53,1.42
+Persistent Systems,PERSISTENT.NS,,,,,,,,14.57,-5.64,0.82
+Wipro,WIPRO.NS,,,,,,,,25.12,-14.09,0.46
+Infosys,INFY.NS,,,,,,,,19.2,-12.32,0.33
+Tech Mahindra,TECHM.NS,,,,,,,,18.48,-6.39,-1.41
+HCL Tech,HCLTECH.NS,,,,,,,,17.14,-6.26,-2.58
+LTIMindtree,LTIM.NS,,,,,,,,,,

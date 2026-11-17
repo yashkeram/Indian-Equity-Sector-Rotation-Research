@@ -1,0 +1,103 @@
+{
+    "month": "October 2026",
+    "year": 2026,
+    "nifty50_return": 1.91,
+    "best_sector": "it",
+    "best_sector_return": 17.69,
+    "worst_sector": "metal",
+    "worst_sector_return": -7.65,
+    "sector_returns": {
+        "nifty50": 1.91,
+        "bank": 0.1,
+        "it": 17.69,
+        "pharma": 2.6,
+        "auto": -3.31,
+        "fmcg": -2.02,
+        "metal": -7.65,
+        "realty": -3.95
+    },
+    "top_stocks": {
+        "auto": [
+            "TVS Motor",
+            "Eicher Motors",
+            "Hero MotoCorp"
+        ],
+        "bank": [
+            "Kotak Mahindra Bank",
+            "Federal Bank",
+            "ICICI Bank"
+        ],
+        "fmcg": [
+            "Tata Consumer",
+            "Marico",
+            "ITC"
+        ],
+        "it": [
+            "Wipro",
+            "TCS",
+            "Infosys"
+        ],
+        "metal": [
+            "JSW Steel",
+            "Hindalco",
+            "Vedanta"
+        ],
+        "pharma": [
+            "Dr Reddy",
+            "Zydus",
+            "Divis Lab"
+        ],
+        "realty": [
+            "DLF",
+            "Phoenix Mills",
+            "Prestige Estates"
+        ]
+    },
+    "bottom_stocks": {
+        "auto": [
+            "Ashok Leyland",
+            "Bajaj Auto",
+            "Maruti Suzuki"
+        ],
+        "bank": [
+            "AU Small Finance Bank",
+            "IndusInd Bank",
+            "HDFC Bank"
+        ],
+        "fmcg": [
+            "Nestle India",
+            "Britannia",
+            "Dabur"
+        ],
+        "it": [
+            "Persistent Systems",
+            "Coforge",
+            "HCL Tech"
+        ],
+        "metal": [
+            "SAIL",
+            "Hindustan Zinc",
+            "Jindal Steel"
+        ],
+        "pharma": [
+            "Sun Pharma",
+            "Lupin",
+            "Mankind"
+        ],
+        "realty": [
+            "Macrotech Developers",
+            "Brigade Enterprises",
+            "Sobha"
+        ]
+    },
+    "report_version": "2.0",
+    "data_quality": {
+        "status": "complete",
+        "expected_sector_count": 7,
+        "available_sector_count": 7,
+        "expected_summary_count": 7,
+        "loaded_summary_count": 7,
+        "missing_summaries": [],
+        "warnings": []
+    }
+}

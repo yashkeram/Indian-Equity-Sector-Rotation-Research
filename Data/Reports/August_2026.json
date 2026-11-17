@@ -1,0 +1,103 @@
+{
+    "month": "August 2026",
+    "year": 2026,
+    "nifty50_return": -1.24,
+    "best_sector": "metal",
+    "best_sector_return": 3.73,
+    "worst_sector": "fmcg",
+    "worst_sector_return": -6.3,
+    "sector_returns": {
+        "nifty50": -1.24,
+        "bank": 1.33,
+        "it": 1.57,
+        "pharma": 2.46,
+        "auto": 0.34,
+        "fmcg": -6.3,
+        "metal": 3.73,
+        "realty": 0.3
+    },
+    "top_stocks": {
+        "auto": [
+            "Ashok Leyland",
+            "Bajaj Auto",
+            "Eicher Motors"
+        ],
+        "bank": [
+            "Kotak Mahindra Bank",
+            "Axis Bank",
+            "AU Small Finance Bank"
+        ],
+        "fmcg": [
+            "Nestle India",
+            "Britannia",
+            "Tata Consumer"
+        ],
+        "it": [
+            "Coforge",
+            "TCS",
+            "Persistent Systems"
+        ],
+        "metal": [
+            "SAIL",
+            "Hindustan Zinc",
+            "NALCO"
+        ],
+        "pharma": [
+            "Divis Lab",
+            "Aurobindo",
+            "Zydus"
+        ],
+        "realty": [
+            "Brigade Enterprises",
+            "DLF",
+            "Oberoi Realty"
+        ]
+    },
+    "bottom_stocks": {
+        "auto": [
+            "Maruti Suzuki",
+            "Mahindra & Mahindra",
+            "TVS Motor"
+        ],
+        "bank": [
+            "HDFC Bank",
+            "Federal Bank",
+            "IndusInd Bank"
+        ],
+        "fmcg": [
+            "Godrej Consumer",
+            "Dabur",
+            "ITC"
+        ],
+        "it": [
+            "HCL Tech",
+            "Tech Mahindra",
+            "Infosys"
+        ],
+        "metal": [
+            "Jindal Steel",
+            "Tata Steel",
+            "JSW Steel"
+        ],
+        "pharma": [
+            "Lupin",
+            "Cipla",
+            "Mankind"
+        ],
+        "realty": [
+            "Sobha",
+            "Godrej Properties",
+            "Macrotech Developers"
+        ]
+    },
+    "report_version": "2.0",
+    "data_quality": {
+        "status": "complete",
+        "expected_sector_count": 7,
+        "available_sector_count": 7,
+        "expected_summary_count": 7,
+        "loaded_summary_count": 7,
+        "missing_summaries": [],
+        "warnings": []
+    }
+}

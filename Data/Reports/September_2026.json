@@ -1,0 +1,103 @@
+{
+    "month": "September 2026",
+    "year": 2026,
+    "nifty50_return": -6.06,
+    "best_sector": "pharma",
+    "best_sector_return": -2.75,
+    "worst_sector": "it",
+    "worst_sector_return": -11.18,
+    "sector_returns": {
+        "nifty50": -6.06,
+        "bank": -5.85,
+        "it": -11.18,
+        "pharma": -2.75,
+        "auto": -8.83,
+        "fmcg": -3.3,
+        "metal": -3.28,
+        "realty": -6.28
+    },
+    "top_stocks": {
+        "auto": [
+            "Hero MotoCorp",
+            "TVS Motor",
+            "Eicher Motors"
+        ],
+        "bank": [
+            "HDFC Bank",
+            "Kotak Mahindra Bank",
+            "Axis Bank"
+        ],
+        "fmcg": [
+            "ITC",
+            "Dabur",
+            "Marico"
+        ],
+        "it": [
+            "Persistent Systems",
+            "HCL Tech",
+            "Tech Mahindra"
+        ],
+        "metal": [
+            "Jindal Steel",
+            "Tata Steel",
+            "JSW Steel"
+        ],
+        "pharma": [
+            "Dr Reddy",
+            "Mankind",
+            "Zydus"
+        ],
+        "realty": [
+            "Phoenix Mills",
+            "DLF",
+            "Sobha"
+        ]
+    },
+    "bottom_stocks": {
+        "auto": [
+            "Ashok Leyland",
+            "Maruti Suzuki",
+            "Bajaj Auto"
+        ],
+        "bank": [
+            "IndusInd Bank",
+            "Federal Bank",
+            "State Bank of India"
+        ],
+        "fmcg": [
+            "Nestle India",
+            "Tata Consumer",
+            "Britannia"
+        ],
+        "it": [
+            "TCS",
+            "Wipro",
+            "Infosys"
+        ],
+        "metal": [
+            "NALCO",
+            "Hindalco",
+            "Vedanta"
+        ],
+        "pharma": [
+            "Sun Pharma",
+            "Lupin",
+            "Cipla"
+        ],
+        "realty": [
+            "Godrej Properties",
+            "Brigade Enterprises",
+            "Prestige Estates"
+        ]
+    },
+    "report_version": "2.0",
+    "data_quality": {
+        "status": "complete",
+        "expected_sector_count": 7,
+        "available_sector_count": 7,
+        "expected_summary_count": 7,
+        "loaded_summary_count": 7,
+        "missing_summaries": [],
+        "warnings": []
+    }
+}

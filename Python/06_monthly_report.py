@@ -1,72 +1,33 @@
-import os
+
+from pathlib import Path
 import sys
 import json
+
 import pandas as pd
 
 
 # ============================================================
-# MODULE 06 - MONTHLY REPORT GENERATOR
+# PROJECT PATHS
 # ============================================================
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ============================================================
-# PATHS
-# ============================================================
+DATA_DIR = BASE_DIR / "Data"
+PROCESSED_DIR = DATA_DIR / "Processed"
+SUMMARY_DIR = DATA_DIR / "Summary"
+REPORT_DIR = DATA_DIR / "Reports"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(BASE_DIR, "..")
-)
-
-DATA_FOLDER = os.path.join(
-    PROJECT_ROOT,
-    "Data"
-)
-
-PROCESSED_FOLDER = os.path.join(
-    DATA_FOLDER,
-    "Processed"
-)
-
-SUMMARY_FOLDER = os.path.join(
-    DATA_FOLDER,
-    "Summary"
-)
-
-REPORT_FOLDER = os.path.join(
-    DATA_FOLDER,
-    "Reports"
-)
-
-
-# Create Reports folder if it does not exist
-os.makedirs(
-    REPORT_FOLDER,
+REPORT_DIR.mkdir(
+    parents=True,
     exist_ok=True
 )
 
 
 # ============================================================
-# MONTH INPUT
+# CONFIGURATION
 # ============================================================
 
-if len(sys.argv) != 2:
-
-    print()
-    print("Usage:")
-    print("python Python\\06_monthly_report.py July")
-    print()
-
-    sys.exit(1)
-
-
-MONTH_NAME = sys.argv[1].strip().capitalize()
-
-
-# ============================================================
-# MONTH CONFIGURATION
-# ============================================================
+YEAR = 2026
 
 MONTHS = [
     "January",
@@ -80,512 +41,573 @@ MONTHS = [
     "September",
     "October",
     "November",
-    "December"
+    "December",
 ]
 
-
-if MONTH_NAME not in MONTHS:
-
-    print()
-    print(f"Invalid month: {MONTH_NAME}")
-    print()
-    print("Valid months:")
-
-    for month in MONTHS:
-        print(f" - {month}")
-
-    sys.exit(1)
-
-
-# ============================================================
-# REPORT FILE
-# ============================================================
-
-REPORT_FILE = f"{MONTH_NAME}_2026.json"
-
-REPORT_PATH = os.path.join(
-    REPORT_FOLDER,
-    REPORT_FILE
-)
-
-
-# ============================================================
-# DISPLAY PATHS
-# ============================================================
-
-print()
-print("==========================================")
-print("MODULE 06 - MONTHLY REPORT GENERATOR")
-print("==========================================")
-print()
-
-print(
-    f"Project Root   : {PROJECT_ROOT}"
-)
-
-print(
-    f"Processed Data : {PROCESSED_FOLDER}"
-)
-
-print(
-    f"Summary Folder : {SUMMARY_FOLDER}"
-)
-
-print(
-    f"Report Folder  : {REPORT_FOLDER}"
-)
-
-print(
-    f"Month          : {MONTH_NAME} 2026"
-)
-
-print()
-
-
-# ============================================================
-# VALIDATE PROCESSED FOLDER
-# ============================================================
-
-if not os.path.exists(PROCESSED_FOLDER):
-
-    raise FileNotFoundError(
-        f"Processed folder not found:\n"
-        f"{PROCESSED_FOLDER}"
-    )
-
-
-# ============================================================
-# VALIDATE SUMMARY FOLDER
-# ============================================================
-
-if not os.path.exists(SUMMARY_FOLDER):
-
-    raise FileNotFoundError(
-        f"Summary folder not found:\n"
-        f"{SUMMARY_FOLDER}"
-    )
-
-
-# ============================================================
-# MONTH SUMMARY FOLDER
-# ============================================================
-
-MONTH_SUMMARY_FOLDER = os.path.join(
-    SUMMARY_FOLDER,
-    MONTH_NAME
-)
-
-
-if not os.path.exists(MONTH_SUMMARY_FOLDER):
-
-    raise FileNotFoundError(
-        f"{MONTH_NAME} summary folder not found:\n"
-        f"{MONTH_SUMMARY_FOLDER}\n\n"
-        f"Run Module 05 first."
-    )
-
-
-# ============================================================
-# READ SECTOR RETURNS
-# ============================================================
-
-SECTOR_RETURNS_FILE = os.path.join(
-    PROCESSED_FOLDER,
-    "sector_returns.csv"
-)
-
-
-if not os.path.exists(SECTOR_RETURNS_FILE):
-
-    raise FileNotFoundError(
-        "sector_returns.csv not found:\n"
-        f"{SECTOR_RETURNS_FILE}"
-    )
-
-
-print("Loading sector returns...")
-
-
-sector_returns = pd.read_csv(
-    SECTOR_RETURNS_FILE,
-    index_col=0
-)
-
-
-# ============================================================
-# CONVERT INDEX TO DATES
-# ============================================================
-
-sector_returns.index = pd.to_datetime(
-    sector_returns.index,
-    errors="coerce"
-)
-
-
-# Remove invalid dates
-sector_returns = sector_returns[
-    sector_returns.index.notna()
+# Expected sector index names.
+EXPECTED_SECTORS = [
+    "auto",
+    "bank",
+    "it",
+    "pharma",
+    "fmcg",
+    "metal",
+    "realty",
 ]
 
-
-# ============================================================
-# FIND REQUESTED MONTH
-# ============================================================
-
-target_month_number = (
-    MONTHS.index(MONTH_NAME) + 1
-)
-
-
-matching_rows = sector_returns[
-    (sector_returns.index.year == 2026)
-    &
-    (
-        sector_returns.index.month
-        == target_month_number
-    )
-]
-
-
-if matching_rows.empty:
-
-    raise ValueError(
-        f"No sector return data found for "
-        f"{MONTH_NAME} 2026.\n\n"
-        f"Available dates:\n"
-        f"{list(sector_returns.index.strftime('%Y-%m-%d'))}"
-    )
-
-
-# Use the latest available row for that month
-latest = matching_rows.iloc[-1]
-
-
-# Convert values to numeric
-latest = pd.to_numeric(
-    latest,
-    errors="coerce"
-)
-
-
-latest = latest.dropna()
+# Existing JSON field names are preserved for Module 07.
+REPORT_VERSION = "2.0"
 
 
 # ============================================================
-# VALIDATE MONTH DATA
+# MONTH INPUT
 # ============================================================
 
-if latest.empty:
+def get_target_month():
 
-    raise ValueError(
-        f"No valid sector returns available "
-        f"for {MONTH_NAME} 2026."
-    )
+    if len(sys.argv) != 2:
+
+        print(
+            "\nUsage: python Python/06_monthly_report.py October"
+        )
+
+        print("\nValid months:")
+
+        for month in MONTHS:
+            print(f" - {month}")
+
+        raise SystemExit(1)
+
+    month_name = sys.argv[1].strip().capitalize()
+
+    if month_name not in MONTHS:
+        raise ValueError(
+            f"Invalid month: {month_name}"
+        )
+
+    return month_name
 
 
 # ============================================================
-# BEST SECTOR
+# LOAD SECTOR RETURNS
 # ============================================================
 
-# Exclude NIFTY 50 from sector ranking
-sector_only = latest.drop(
-    labels=["nifty50"],
-    errors="ignore"
-)
+def load_sector_returns(month_name):
 
+    file_path = PROCESSED_DIR / "sector_returns.csv"
 
-if sector_only.empty:
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"Sector returns file not found: {file_path}"
+        )
 
-    raise ValueError(
-        "No sector data available after "
-        "excluding NIFTY 50."
+    df = pd.read_csv(file_path)
+
+    if df.empty:
+        raise ValueError(
+            "Sector returns file is empty."
+        )
+
+    if "Date" not in df.columns:
+        # Support older CSV files where Date was saved as index.
+        first_column = df.columns[0]
+
+        if first_column.startswith("Unnamed"):
+            df = df.rename(
+                columns={first_column: "Date"}
+            )
+        else:
+            raise ValueError(
+                "Date column not found in sector_returns.csv."
+            )
+
+    df["Date"] = pd.to_datetime(
+        df["Date"],
+        errors="coerce"
     )
 
+    df = df.dropna(
+        subset=["Date"]
+    )
 
-best_sector = sector_only.idxmax()
+    if df.empty:
+        raise ValueError(
+            "No valid dates found in sector_returns.csv."
+        )
 
-best_sector_return = float(
-    sector_only.max()
-)
+    df = df.sort_values("Date")
+
+    target_month_number = (
+        MONTHS.index(month_name) + 1
+    )
+
+    matching = df[
+        (df["Date"].dt.year == YEAR)
+        & (df["Date"].dt.month == target_month_number)
+    ]
+
+    if matching.empty:
+        raise ValueError(
+            f"No sector returns found for {month_name} {YEAR}."
+        )
+
+    latest = matching.iloc[-1]
+
+    numeric_values = latest.drop(
+        labels=["Date"],
+        errors="ignore"
+    )
+
+    numeric_values = pd.to_numeric(
+        numeric_values,
+        errors="coerce"
+    )
+
+    numeric_values = numeric_values.dropna()
+
+    if numeric_values.empty:
+        raise ValueError(
+            f"No valid sector returns for {month_name} {YEAR}."
+        )
+
+    return numeric_values
 
 
 # ============================================================
-# WORST SECTOR
+# VALIDATE SECTOR RETURNS
 # ============================================================
 
-worst_sector = sector_only.idxmin()
+def validate_sector_returns(latest):
 
-worst_sector_return = float(
-    sector_only.min()
-)
+    warnings = []
+
+    available_sectors = [
+        str(column).lower()
+        for column in latest.index
+    ]
+
+    expected_indices = [
+        "nifty50",
+        *EXPECTED_SECTORS
+    ]
+
+    missing_indices = [
+        sector
+        for sector in expected_indices
+        if sector not in available_sectors
+    ]
+
+    if missing_indices:
+        warnings.append(
+            "Missing index returns: "
+            + ", ".join(missing_indices)
+        )
+
+    if "nifty50" not in available_sectors:
+        raise ValueError(
+            "NIFTY 50 return is missing. "
+            "Cannot create the monthly report."
+        )
+
+    available_sector_values = latest.drop(
+        labels=["nifty50"],
+        errors="ignore"
+    )
+
+    if available_sector_values.empty:
+        raise ValueError(
+            "No sector returns available."
+        )
+
+    return warnings, available_sector_values
 
 
 # ============================================================
-# NIFTY 50
+# LOAD STOCK SUMMARIES
 # ============================================================
 
-if "nifty50" in latest.index:
+def load_stock_summaries(month_name):
+
+    month_folder = SUMMARY_DIR / month_name
+
+    if not month_folder.exists():
+        raise FileNotFoundError(
+            f"{month_name} summary folder not found: "
+            f"{month_folder}\n"
+            "Run Module 05 first."
+        )
+
+    summary_files = sorted(
+        month_folder.glob("*_summary.csv")
+    )
+
+    if not summary_files:
+        raise FileNotFoundError(
+            f"No summary CSV files found in: {month_folder}"
+        )
+
+    top_stocks = {}
+    bottom_stocks = {}
+
+    loaded_sectors = []
+    warnings = []
+
+    for file_path in summary_files:
+
+        sector = file_path.stem.replace(
+            "_summary",
+            ""
+        ).lower()
+
+        try:
+
+            df = pd.read_csv(file_path)
+
+            required_columns = [
+                "Company",
+                "Return",
+                "Rank",
+            ]
+
+            missing_columns = [
+                column
+                for column in required_columns
+                if column not in df.columns
+            ]
+
+            if missing_columns:
+                raise ValueError(
+                    f"Missing columns: {missing_columns}"
+                )
+
+            df["Company"] = (
+                df["Company"]
+                .fillna("")
+                .astype(str)
+                .str.strip()
+            )
+
+            df["Return"] = pd.to_numeric(
+                df["Return"],
+                errors="coerce"
+            )
+
+            df["Rank"] = (
+                df["Rank"]
+                .fillna("")
+                .astype(str)
+                .str.strip()
+            )
+
+            df = df[
+                (df["Company"] != "")
+                & df["Return"].notna()
+            ]
+
+            top = df[
+                df["Rank"].str.startswith("Top")
+            ]
+
+            bottom = df[
+                df["Rank"].str.startswith("Bottom")
+            ]
+
+            if top.empty and bottom.empty:
+                raise ValueError(
+                    "No valid Top or Bottom stock entries."
+                )
+
+            top_stocks[sector] = (
+                top["Company"].tolist()
+            )
+
+            bottom_stocks[sector] = (
+                bottom["Company"].tolist()
+            )
+
+            loaded_sectors.append(sector)
+
+            print(
+                f"{sector.upper():<12} summary loaded"
+            )
+
+        except Exception as error:
+
+            warnings.append(
+                f"{file_path.name}: {error}"
+            )
+
+            print(
+                f"WARNING: Could not process "
+                f"{file_path.name}: {error}"
+            )
+
+    return (
+        top_stocks,
+        bottom_stocks,
+        loaded_sectors,
+        warnings,
+        len(summary_files),
+    )
+
+
+# ============================================================
+# BUILD REPORT
+# ============================================================
+
+def build_report(month_name, latest, sector_only,
+                 top_stocks, bottom_stocks,
+                 loaded_sectors, warnings,
+                 summary_file_count):
+
+    best_sector = sector_only.idxmax()
+    worst_sector = sector_only.idxmin()
 
     nifty50_return = float(
         latest["nifty50"]
     )
 
-else:
+    sector_returns_dict = {}
 
-    nifty50_return = None
+    for sector, value in latest.items():
 
-
-# ============================================================
-# READ MODULE 05 SUMMARIES
-# ============================================================
-
-print()
-print(
-    f"Reading {MONTH_NAME} stock summaries..."
-)
-print()
-
-
-top_stocks = {}
-
-bottom_stocks = {}
-
-
-summary_files = [
-    file
-    for file in os.listdir(
-        MONTH_SUMMARY_FOLDER
-    )
-    if file.endswith("_summary.csv")
-]
-
-
-if not summary_files:
-
-    print(
-        f"Warning: No summary CSV files found in "
-        f"{MONTH_SUMMARY_FOLDER}"
-    )
-
-
-# ============================================================
-# PROCESS EACH SECTOR SUMMARY
-# ============================================================
-
-for file in sorted(summary_files):
-
-    sector = file.replace(
-        "_summary.csv",
-        ""
-    )
-
-
-    file_path = os.path.join(
-        MONTH_SUMMARY_FOLDER,
-        file
-    )
-
-
-    try:
-
-        df = pd.read_csv(
-            file_path
+        sector_returns_dict[str(sector)] = round(
+            float(value),
+            2
         )
 
+    expected_sector_count = len(EXPECTED_SECTORS)
 
-        # ====================================================
-        # TOP STOCKS
-        # ====================================================
+    missing_summaries = [
+        sector
+        for sector in EXPECTED_SECTORS
+        if sector not in loaded_sectors
+    ]
 
-        if (
-            "Rank" in df.columns
-            and "Company" in df.columns
-        ):
-
-            top = df[
-                df["Rank"]
-                .astype(str)
-                .str.startswith("Top")
-            ]
-
-
-            top_stocks[sector] = (
-                top["Company"]
-                .dropna()
-                .tolist()
-            )
-
-
-            # =================================================
-            # BOTTOM STOCKS
-            # =================================================
-
-            bottom = df[
-                df["Rank"]
-                .astype(str)
-                .str.startswith("Bottom")
-            ]
-
-
-            bottom_stocks[sector] = (
-                bottom["Company"]
-                .dropna()
-                .tolist()
-            )
-
-
-        print(
-            f"{sector.upper():<10} summary loaded"
+    if missing_summaries:
+        warnings.append(
+            "Missing or unprocessed stock summaries: "
+            + ", ".join(missing_summaries)
         )
 
-
-    except Exception as error:
-
-        print(
-            f"Warning: Could not process "
-            f"{file}: {error}"
+    if summary_file_count < expected_sector_count:
+        warnings.append(
+            f"Expected {expected_sector_count} sector summary files, "
+            f"but found {summary_file_count}."
         )
 
-
-# ============================================================
-# CREATE SECTOR RETURNS DICTIONARY
-# ============================================================
-
-sector_returns_dict = {}
-
-
-for sector, value in latest.items():
-
-    sector_returns_dict[
-        str(sector)
-    ] = round(
-        float(value),
-        2
+    complete = (
+        len(missing_summaries) == 0
+        and all(
+            sector in sector_returns_dict
+            for sector in EXPECTED_SECTORS
+        )
     )
 
+    report = {
 
-# ============================================================
-# CREATE REPORT
-# ============================================================
+        # ----------------------------------------------------
+        # EXISTING FIELDS - KEEP FOR MODULE 07
+        # ----------------------------------------------------
 
-report = {
+        "month": f"{month_name} {YEAR}",
 
-    "month":
-        f"{MONTH_NAME} 2026",
+        "year": YEAR,
 
-    "year":
-        2026,
-
-    "nifty50_return":
-        nifty50_return,
-
-    "best_sector":
-        str(best_sector),
-
-    "best_sector_return":
-        round(
-            best_sector_return,
+        "nifty50_return": round(
+            nifty50_return,
             2
         ),
 
-    "worst_sector":
-        str(worst_sector),
+        "best_sector": str(best_sector),
 
-    "worst_sector_return":
-        round(
-            worst_sector_return,
+        "best_sector_return": round(
+            float(sector_only.max()),
             2
         ),
 
-    "sector_returns":
-        sector_returns_dict,
+        "worst_sector": str(worst_sector),
 
-    "top_stocks":
-        top_stocks,
+        "worst_sector_return": round(
+            float(sector_only.min()),
+            2
+        ),
 
-    "bottom_stocks":
-        bottom_stocks
-}
+        "sector_returns": sector_returns_dict,
+
+        "top_stocks": top_stocks,
+
+        "bottom_stocks": bottom_stocks,
+
+        # ----------------------------------------------------
+        # ADDITIONAL DATA QUALITY METADATA
+        # ----------------------------------------------------
+
+        "report_version": REPORT_VERSION,
+
+        "data_quality": {
+
+            "status": (
+                "complete"
+                if complete
+                else "incomplete"
+            ),
+
+            "expected_sector_count": expected_sector_count,
+
+            "available_sector_count": sum(
+                sector in sector_returns_dict
+                for sector in EXPECTED_SECTORS
+            ),
+
+            "expected_summary_count": expected_sector_count,
+
+            "loaded_summary_count": len(loaded_sectors),
+
+            "missing_summaries": missing_summaries,
+
+            "warnings": warnings,
+        },
+    }
+
+    return report
 
 
 # ============================================================
 # SAVE JSON REPORT
 # ============================================================
 
-with open(
-    REPORT_PATH,
-    "w",
-    encoding="utf-8"
-) as file:
+def save_report(report, month_name):
 
-    json.dump(
-        report,
-        file,
-        indent=4,
-        ensure_ascii=False
+    report_path = (
+        REPORT_DIR /
+        f"{month_name}_{YEAR}.json"
     )
 
+    with open(
+        report_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+            report,
+            file,
+            indent=4,
+            ensure_ascii=False,
+            allow_nan=False
+        )
+
+    return report_path
+
 
 # ============================================================
-# DISPLAY RESULTS
+# MAIN
 # ============================================================
 
-print()
-print("==========================================")
-print("MONTHLY REPORT CREATED SUCCESSFULLY")
-print("==========================================")
-print()
+def main():
 
+    print("=" * 55)
+    print("INDIAN EQUITY SECTOR ROTATION RESEARCH")
+    print("MODULE 06 - MONTHLY REPORT GENERATOR")
+    print("=" * 55)
 
-print(
-    f"Month       : {MONTH_NAME} 2026"
-)
+    month_name = get_target_month()
 
+    print(f"\nTarget month: {month_name} {YEAR}")
 
-if nifty50_return is not None:
+    # Load sector returns.
+    latest = load_sector_returns(
+        month_name
+    )
+
+    # Validate sector returns.
+    warnings, sector_only = validate_sector_returns(
+        latest
+    )
+
+    # Load stock summaries.
+    (
+        top_stocks,
+        bottom_stocks,
+        loaded_sectors,
+        summary_warnings,
+        summary_file_count,
+    ) = load_stock_summaries(
+        month_name
+    )
+
+    warnings.extend(summary_warnings)
+
+    # Build report.
+    report = build_report(
+        month_name,
+        latest,
+        sector_only,
+        top_stocks,
+        bottom_stocks,
+        loaded_sectors,
+        warnings,
+        summary_file_count,
+    )
+
+    # Save report.
+    report_path = save_report(
+        report,
+        month_name
+    )
+
+    # Display results.
+    print("\n" + "=" * 55)
+    print("MONTHLY REPORT GENERATED")
+    print("=" * 55)
 
     print(
-        f"NIFTY 50    : "
-        f"{nifty50_return:.2f}%"
+        f"\nMonth: {report['month']}"
     )
 
+    print(
+        f"NIFTY 50: {report['nifty50_return']:.2f}%"
+    )
 
-print(
-    f"Best Sector : "
-    f"{str(best_sector).title()} "
-    f"({best_sector_return:.2f}%)"
-)
+    print(
+        f"Best sector: {report['best_sector']} "
+        f"({report['best_sector_return']:.2f}%)"
+    )
+
+    print(
+        f"Worst sector: {report['worst_sector']} "
+        f"({report['worst_sector_return']:.2f}%)"
+    )
+
+    print(
+        f"\nData quality: "
+        f"{report['data_quality']['status'].upper()}"
+    )
+
+    print(
+        f"Sector summaries loaded: "
+        f"{report['data_quality']['loaded_summary_count']}/"
+        f"{report['data_quality']['expected_summary_count']}"
+    )
+
+    if warnings:
+
+        print("\nWarnings:")
+
+        for warning in warnings:
+            print(f"- {warning}")
+
+    print(
+        f"\nReport saved to: {report_path}"
+    )
+
+    print("\nMODULE 06 COMPLETED")
 
 
-print(
-    f"Worst Sector: "
-    f"{str(worst_sector).title()} "
-    f"({worst_sector_return:.2f}%)"
-)
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
-
-print()
-
-
-print(
-    f"Sector data : "
-    f"{len(sector_returns_dict)} sectors"
-)
-
-
-print(
-    f"Summaries   : "
-    f"{len(summary_files)} sectors"
-)
-
-
-print()
-
-
-print("Report saved to:")
-
-print(
-    REPORT_PATH
-)
-
-print()
+if __name__ == "__main__":
+    main()

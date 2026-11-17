@@ -1,9 +1,9 @@
-Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul
-Jindal Steel,JSL.NS,,-5.62,-8.42,7.94,-10.72,1.1,7.76
-JSW Steel,JSWSTEEL.NS,,4.14,-11.24,12.65,1.07,-4.04,5.02
-NALCO,NATIONALUM.NS,,-6.85,8.88,3.42,6.83,-19.99,4.6
-Hindalco,HINDALCO.NS,,-3.94,-4.35,17.36,8.55,-15.1,4.24
-Hindustan Zinc,HINDZINC.NS,,-3.93,-16.84,20.85,6.21,-15.77,2.82
-Tata Steel,TATASTEEL.NS,,9.94,-9.64,10.16,-1.58,-7.73,2.44
-SAIL,SAIL.NS,,9.65,-8.62,21.93,10.7,-15.11,0.45
-Vedanta,VEDL.NS,,5.41,-7.33,-58.53,29.85,-20.38,-4.1
+Company,Ticker,Jan,Feb,Mar,Apr,May,Jun,Jul,Oct,Sep,Aug
+SAIL,SAIL.NS,,,,,,,,-11.29,-5.71,15.36
+Hindustan Zinc,HINDZINC.NS,,,,,,,,-10.64,-4.95,10.43
+NALCO,NATIONALUM.NS,,,,,,,,-7.74,-10.63,9.26
+Vedanta,VEDL.NS,,,,,,,,-6.32,-6.9,5.28
+Hindalco,HINDALCO.NS,,,,,,,,-6.06,-7.25,4.21
+JSW Steel,JSWSTEEL.NS,,,,,,,,-0.59,-4.15,2.97
+Tata Steel,TATASTEEL.NS,,,,,,,,-9.06,-0.03,-2.82
+Jindal Steel,JSL.NS,,,,,,,,-9.82,6.44,-4.04
